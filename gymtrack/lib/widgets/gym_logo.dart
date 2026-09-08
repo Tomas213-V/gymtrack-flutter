@@ -10,12 +10,18 @@ class GymLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return Image.asset(
+      'assets/images/logo_verde.png',
       width: size,
       height: size,
-      child: CustomPaint(
-        size: Size(size, size),
-        painter: GymLogoPainter(),
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) => SizedBox(
+        width: size,
+        height: size,
+        child: CustomPaint(
+          size: Size(size, size),
+          painter: GymLogoPainter(),
+        ),
       ),
     );
   }

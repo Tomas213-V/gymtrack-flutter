@@ -42,9 +42,15 @@ class GoogleSignInSection extends StatelessWidget {
               ],
             ),
             child: Center(
-              child: CustomPaint(
-                size: const Size(32, 32),
-                painter: GoogleLogoPainter(),
+              child: Image.asset(
+                'assets/images/Google.png',
+                width: 32,
+                height: 32,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => CustomPaint(
+                  size: const Size(32, 32),
+                  painter: GoogleLogoPainter(),
+                ),
               ),
             ),
           ),
