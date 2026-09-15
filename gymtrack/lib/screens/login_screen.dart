@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/google_button.dart';
 import '../widgets/gym_logo.dart';
+import 'gym_setup_screen.dart';
+import 'main_layout_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -16,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -24,14 +28,72 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin() {
-    // Aquí se conectará con el backend en Node.js
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Iniciando sesión...'),
-        backgroundColor: AppTheme.cardBackground,
-      ),
+  Future<void> _handleLogin() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final authService = AuthService();
+    final response = await authService.login(
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
     );
+
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (response.success && response.user != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(response.message),
+          backgroundColor: const Color(0xFF1B5E20),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      final user = response.user!;
+      final hasGym = user.gimnasio != null;
+
+      if (hasGym) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => MainLayoutScreen(user: user),
+          ),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => GymSetupScreen(user: user),
+          ),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  response.message,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red.shade900,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override
@@ -77,6 +139,16 @@ class _LoginScreenState extends State<LoginScreen> {
                             hintText: 'tucorreo@gmail.com',
                             prefixIcon: Icons.person_outline,
                             keyboardType: TextInputType.emailAddress,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Por favor, ingresa tu correo electrónico';
+                              }
+                              final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
+                              if (!emailRegex.hasMatch(value.trim())) {
+                                return 'Ingresa un correo electrónico válido';
+                              }
+                              return null;
+                            },
                           ),
                           const SizedBox(height: 18),
 
@@ -87,6 +159,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             hintText: '**********',
                             prefixIcon: Icons.lock_outline,
                             isPassword: true,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Por favor, ingresa tu contraseña';
+                              }
+                              return null;
+                            },
                           ),
                           const SizedBox(height: 12),
 
@@ -144,37 +222,49 @@ class _LoginScreenState extends State<LoginScreen> {
 
                           // Botón INICIAR SESION (Verde lima brillante)
                           ElevatedButton(
-                            onPressed: _handleLogin,
+                            onPressed: _isLoading ? null : _handleLogin,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.primaryGreen,
                               foregroundColor: Colors.black,
+                              disabledBackgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.6),
                               elevation: 0,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Text(
-                              'INICIAR SESION',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.1,
-                                color: Colors.black,
-                              ),
-                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.4,
+                                      color: Colors.black,
+                                    ),
+                                  )
+                                : const Text(
+                                    'INICIAR SESION',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 1.1,
+                                      color: Colors.black,
+                                    ),
+                                  ),
                           ),
                           const SizedBox(height: 14),
 
                           // Botón REGISTRARSE (Verde oscuro)
                           ElevatedButton(
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => const RegisterScreen(),
-                                ),
-                              );
-                            },
+                            onPressed: _isLoading
+                                ? null
+                                : () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => const RegisterScreen(),
+                                      ),
+                                    );
+                                  },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.darkGreenButton,
                               foregroundColor: Colors.white,
@@ -225,3 +315,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+

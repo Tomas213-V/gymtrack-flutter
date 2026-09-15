@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { 
   getSocios, 
+  getSociosEstadisticas,
   getSocioById, 
   createSocio, 
   updateSocio, 
@@ -14,6 +15,7 @@ router.use(verifyToken);
 
 // Endpoints definidos
 router.get('/', getSocios);
+router.get('/estadisticas', getSociosEstadisticas);
 router.get('/:id', getSocioById);
 router.post('/', createSocio);
 router.put('/:id', updateSocio);

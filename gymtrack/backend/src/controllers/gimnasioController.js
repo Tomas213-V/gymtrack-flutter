@@ -1,4 +1,5 @@
 const supabase = require('../config/supabase');
+const jwt = require('jsonwebtoken');
 
 /**
  * CONTROLADOR: CREAR GIMNASIO PARA UN USUARIO AUTENTICADO
@@ -53,8 +54,23 @@ const crearGimnasio = async (req, res) => {
       return res.status(500).json({ error: 'Error al registrar el gimnasio: ' + errGym.message });
     }
 
+    // Generar token actualizado con el nuevo id_gimnasio
+    const jwtSecret = process.env.JWT_SECRET || 'gymtrack_jwt_secret_key_2026';
+    const expiresIn = process.env.JWT_EXPIRES_IN || '24h';
+    const token = jwt.sign(
+      {
+        id_usuario: id_usuario,
+        id_gimnasio: nuevoGimnasio.id_gimnasio,
+        email: req.usuario?.email,
+        rol: req.usuario?.rol || 'dueño'
+      },
+      jwtSecret,
+      { expiresIn }
+    );
+
     return res.status(201).json({
       mensaje: 'Gimnasio registrado exitosamente.',
+      token,
       gimnasio: nuevoGimnasio
     });
   } catch (error) {

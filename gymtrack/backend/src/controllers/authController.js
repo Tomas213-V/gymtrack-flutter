@@ -123,6 +123,7 @@ const registerOwner = async (req, res) => {
     });
 
   } catch (error) {
+    console.error('❌ Error interno en registerOwner:', error);
     return res.status(500).json({ error: 'Error interno del servidor: ' + error.message });
   }
 };
@@ -158,6 +159,7 @@ const login = async (req, res) => {
       .maybeSingle();
 
     if (errorUsuario) {
+      console.error('❌ Error al consultar usuario en base de datos:', errorUsuario);
       return res.status(500).json({ 
         error: 'Error al consultar la base de datos: ' + errorUsuario.message 
       });
@@ -176,7 +178,22 @@ const login = async (req, res) => {
     }
 
     // 2. Comparar la contraseña con bcrypt
-    const passwordValida = await bcrypt.compare(passwordInput, usuario.contrasena);
+    if (!usuario.contrasena) {
+      console.warn(`⚠️ El usuario ${cleanEmail} no tiene contraseña registrada.`);
+      return res.status(401).json({ 
+        error: 'Credenciales inválidas. Verifica tu email y contraseña.' 
+      });
+    }
+
+    let passwordValida = false;
+    try {
+      passwordValida = await bcrypt.compare(passwordInput, usuario.contrasena);
+    } catch (bcryptErr) {
+      console.error('❌ Error al verificar contraseña con bcrypt:', bcryptErr);
+      return res.status(401).json({ 
+        error: 'Credenciales inválidas. Verifica tu email y contraseña.' 
+      });
+    }
 
     if (!passwordValida) {
       return res.status(401).json({ 
@@ -185,11 +202,31 @@ const login = async (req, res) => {
     }
 
     // 3. Buscar el gimnasio asociado al usuario (si existe)
-    const { data: gimnasio } = await supabase
-      .from('gimnasio')
-      .select('id_gimnasio, nombre, direccion, telefono, estado')
-      .eq('id_usuario', usuario.id_usuario)
-      .maybeSingle();
+    let gimnasio = null;
+    try {
+      const { data: gymOwner } = await supabase
+        .from('gimnasio')
+        .select('id_gimnasio, nombre, direccion, telefono, estado')
+        .eq('id_usuario', usuario.id_usuario)
+        .maybeSingle();
+
+      if (gymOwner) {
+        gimnasio = gymOwner;
+      } else {
+        // En caso de que sea socio de un gimnasio
+        const { data: socioData } = await supabase
+          .from('socio')
+          .select('id_gimnasio, gimnasio(id_gimnasio, nombre, direccion, telefono, estado)')
+          .eq('id_usuario', usuario.id_usuario)
+          .maybeSingle();
+
+        if (socioData && socioData.gimnasio) {
+          gimnasio = socioData.gimnasio;
+        }
+      }
+    } catch (gymErr) {
+      console.warn('⚠️ No se pudo obtener el gimnasio del usuario:', gymErr.message);
+    }
 
     // 4. Generar token JWT
     const jwtSecret = process.env.JWT_SECRET || 'gymtrack_jwt_secret_key_2026';
@@ -223,6 +260,7 @@ const login = async (req, res) => {
     });
 
   } catch (error) {
+    console.error('❌ Error interno del servidor en login:', error);
     return res.status(500).json({ 
       error: 'Error interno del servidor al procesar el inicio de sesión: ' + error.message 
     });
@@ -263,6 +301,7 @@ const getMe = async (req, res) => {
       usuario
     });
   } catch (error) {
+    console.error('❌ Error interno en getMe:', error);
     return res.status(500).json({ error: 'Error al obtener datos del perfil: ' + error.message });
   }
 };

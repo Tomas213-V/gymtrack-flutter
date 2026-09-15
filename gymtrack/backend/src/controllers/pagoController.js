@@ -3,7 +3,16 @@ const supabase = require('../config/supabase');
 // 1. GET /api/pagos (Listado, Paginación y Filtros)
 const getPagos = async (req, res) => {
   try {
-    const { page = 1, limit = 10, estado, desde, hasta, id_gimnasio } = req.query;
+    const { page = 1, limit = 10, estado, desde, hasta } = req.query;
+    let id_gimnasio = req.query.id_gimnasio || req.usuario?.id_gimnasio;
+    if (!id_gimnasio && req.usuario?.id_usuario) {
+      const { data: gym } = await supabase
+        .from('gimnasio')
+        .select('id_gimnasio')
+        .eq('id_usuario', req.usuario.id_usuario)
+        .maybeSingle();
+      if (gym) id_gimnasio = gym.id_gimnasio;
+    }
     const offset = (page - 1) * limit;
 
     let query = supabase
@@ -61,7 +70,16 @@ const getPagos = async (req, res) => {
 // 2. GET /api/pagos/resumen (Tarjetas de métricas)
 const getResumenPagos = async (req, res) => {
   try {
-    const { desde, hasta, id_gimnasio } = req.query;
+    const { desde, hasta } = req.query;
+    let id_gimnasio = req.query.id_gimnasio || req.usuario?.id_gimnasio;
+    if (!id_gimnasio && req.usuario?.id_usuario) {
+      const { data: gym } = await supabase
+        .from('gimnasio')
+        .select('id_gimnasio')
+        .eq('id_usuario', req.usuario.id_usuario)
+        .maybeSingle();
+      if (gym) id_gimnasio = gym.id_gimnasio;
+    }
 
     let targetData = null;
 
