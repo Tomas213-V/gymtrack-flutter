@@ -7,6 +7,7 @@ import '../widgets/gym_logo.dart';
 import 'gym_setup_screen.dart';
 import 'main_layout_screen.dart';
 import 'register_screen.dart';
+import 'socio/login_socio_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -176,10 +177,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             children: [
                               InkWell(
                                 onTap: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Información de socio / membresía'),
-                                      backgroundColor: AppTheme.cardBackground,
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => const LoginSocioScreen(),
                                     ),
                                   );
                                 },

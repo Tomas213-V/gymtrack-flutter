@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
+import 'dueno/videos/videos_dueno_screen.dart';
 
 class MenuSeccionesScreen extends StatelessWidget {
   final UserModel? user;
@@ -425,7 +426,22 @@ class MenuSeccionesScreen extends StatelessWidget {
 
             const SizedBox(height: 28),
 
-            // 1. Tarjeta de Ejercicios
+            // 1. Tarjeta de Videos
+            _buildOptionCard(
+              context: context,
+              icon: Icons.play_circle_outline_rounded,
+              title: 'Videos',
+              subtitle: 'Administrá el contenido para tus\nsocios',
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const VideosDuenoScreen()),
+                );
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            // 2. Tarjeta de Ejercicios
             _buildOptionCard(
               context: context,
               icon: Icons.link_rounded,

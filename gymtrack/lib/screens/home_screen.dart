@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
+import 'dueno/videos/videos_dueno_screen.dart';
 import 'login_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -41,63 +42,6 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  void _showVideosModal(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF161D21),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            const Row(
-              children: [
-                Icon(Icons.play_circle_outline, color: Color(0xFF00E676), size: 28),
-                SizedBox(width: 12),
-                Text(
-                  'Videos y Rutinas Visuales',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Próximamente podrás subir y reproducir videos tutoriales de técnica para los socios del gimnasio.',
-              style: TextStyle(color: Color(0xFF8A98A0), fontSize: 14),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00E676),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Entendido', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   void _showReportesModal(BuildContext context) {
     showModalBottomSheet(
@@ -387,7 +331,11 @@ class HomeScreen extends StatelessWidget {
                   _buildQuickAction(
                     icon: Icons.play_circle_outline_rounded,
                     label: 'Videos',
-                    onTap: () => _showVideosModal(context),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const VideosDuenoScreen()),
+                      );
+                    },
                   ),
                   _buildQuickAction(
                     icon: Icons.bar_chart_rounded,
