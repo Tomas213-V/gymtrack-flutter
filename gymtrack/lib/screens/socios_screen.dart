@@ -111,7 +111,7 @@ class _SociosScreenState extends State<SociosScreen> {
                             'Nuevo Socio',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 20,
+                              fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -169,18 +169,18 @@ class _SociosScreenState extends State<SociosScreen> {
                         dropdownColor: const Color(0xFF1E282D),
                         style: const TextStyle(color: Colors.white),
                         decoration: _inputDecoration('Estado', Icons.toggle_on_outlined),
-                        items: [
-                          const DropdownMenuItem(value: 'activo', child: Text('Activo')),
-                          const DropdownMenuItem(value: 'pendiente', child: Text('Pendiente')),
-                          const DropdownMenuItem(value: 'inactivo', child: Text('Inactivo')),
+                        items: const [
+                          DropdownMenuItem(value: 'activo', child: Text('Activo')),
+                          DropdownMenuItem(value: 'pendiente', child: Text('Pendiente')),
+                          DropdownMenuItem(value: 'inactivo', child: Text('Inactivo')),
                         ],
                         onChanged: (val) {
                           if (val != null) setModalState(() => selectedEstado = val);
                         },
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       SizedBox(
-                        height: 48,
+                        height: 46,
                         child: ElevatedButton(
                           onPressed: isSaving
                               ? null
@@ -227,7 +227,7 @@ class _SociosScreenState extends State<SociosScreen> {
                                 )
                               : const Text(
                                   'GUARDAR SOCIO',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                                 ),
                         ),
                       ),
@@ -239,6 +239,90 @@ class _SociosScreenState extends State<SociosScreen> {
           },
         );
       },
+    );
+  }
+
+  void _showSocioDetailModal(SocioModel socio) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF161E22),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      socio.nombreCompleto.isNotEmpty ? socio.nombreCompleto : 'Socio',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white70),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _buildDetailItem(Icons.badge_outlined, 'DNI', socio.dni),
+              if (socio.telefono != null && socio.telefono!.isNotEmpty)
+                _buildDetailItem(Icons.phone_outlined, 'Teléfono', socio.telefono!),
+              _buildDetailItem(Icons.card_membership_outlined, 'Plan', socio.plan ?? 'Plan Mensual'),
+              _buildDetailItem(Icons.event_available_outlined, 'Vencimiento', socio.fechaVencimiento ?? '25 May 2026'),
+              _buildDetailItem(Icons.toggle_on_outlined, 'Estado', socio.estado.toUpperCase()),
+              const SizedBox(height: 18),
+              SizedBox(
+                height: 44,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1E282D),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(color: Color(0xFF2B3A42)),
+                    ),
+                  ),
+                  child: const Text('Cerrar', style: TextStyle(fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDetailItem(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: const Color(0xFF00E676)),
+          const SizedBox(width: 10),
+          Text('$label: ', style: const TextStyle(color: Color(0xFF8F9CA3), fontSize: 13)),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -284,52 +368,31 @@ class _SociosScreenState extends State<SociosScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // 1. Título de sección y botón + Nuevo Socio
+                // 1. Encabezado limpio y botón + Nuevo
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF00E676).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.people_alt_outlined,
-                        color: Color(0xFF00E676),
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Socios',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.2,
-                            ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Socios',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
                           ),
-                          SizedBox(height: 2),
-                          Text(
-                            'Gestiona y consulta todos los socios de tu gimnasio',
-                            style: TextStyle(
-                              color: Color(0xFF8F9CA3),
-                              fontSize: 12,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$_totalSocios socios registrados',
+                          style: const TextStyle(
+                            color: Color(0xFF8F9CA3),
+                            fontSize: 12,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    // Botón + Nuevo socio
                     ElevatedButton.icon(
                       onPressed: _showNewSocioModal,
                       icon: const Icon(Icons.add, size: 16, color: Colors.black),
@@ -353,145 +416,87 @@ class _SociosScreenState extends State<SociosScreen> {
                   ],
                 ),
 
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
 
-                // 2. Buscador y Filtros (2)
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF161E22),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFF27343B), width: 1),
-                        ),
-                        child: TextField(
-                          controller: _searchController,
-                          onChanged: _onSearchChanged,
-                          style: const TextStyle(color: Colors.white, fontSize: 13),
-                          decoration: const InputDecoration(
-                            hintText: 'Buscar socio por nombre, DNI o teléfono...',
-                            hintStyle: TextStyle(color: Color(0xFF6B7B84), fontSize: 12),
-                            prefixIcon: Icon(Icons.search, color: Color(0xFF8F9CA3), size: 20),
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Container(
-                      height: 44,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF161E22),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF27343B), width: 1),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.tune_rounded, color: Colors.white, size: 18),
-                          const SizedBox(width: 6),
-                          const Text(
-                            'Filtros',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF00E676),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Text(
-                              '2',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 18),
-
-                // 3. Tarjetas de métricas (4 métricas)
-                SizedBox(
-                  height: 112,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: [
-                      _buildMetricCard(
-                        icon: Icons.person_outline_rounded,
-                        iconColor: const Color(0xFF00E676),
-                        value: _stats.total.toString(),
-                        label: 'Total socios',
-                        subtext: '↑ ${_stats.nuevosEsteMes} este mes',
-                        subtextColor: const Color(0xFF00E676),
-                      ),
-                      const SizedBox(width: 10),
-                      _buildMetricCard(
-                        icon: Icons.check_circle_outline_rounded,
-                        iconColor: const Color(0xFF00E676),
-                        value: _stats.activos.toString(),
-                        label: 'Activos',
-                        subtext: '${_stats.pctActivos}% del total',
-                        subtextColor: const Color(0xFF00E676),
-                      ),
-                      const SizedBox(width: 10),
-                      _buildMetricCard(
-                        icon: Icons.access_time_rounded,
-                        iconColor: const Color(0xFFF59E0B),
-                        value: _stats.pendientes.toString(),
-                        label: 'Pendientes',
-                        subtext: '${_stats.pctPendientes}% del total',
-                        subtextColor: const Color(0xFFF59E0B),
-                      ),
-                      const SizedBox(width: 10),
-                      _buildMetricCard(
-                        icon: Icons.cancel_outlined,
-                        iconColor: const Color(0xFFEF4444),
-                        value: _stats.inactivos.toString(),
-                        label: 'Inactivos',
-                        subtext: '${_stats.pctInactivos}% del total',
-                        subtextColor: const Color(0xFFEF4444),
-                      ),
-                    ],
+                // 2. Buscador responsivo y limpio
+                Container(
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF161E22),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF27343B), width: 1),
                   ),
-                ),
-
-                const SizedBox(height: 18),
-
-                // 4. Pestañas de filtro (Todos, Activos, Pendientes, Inactivos)
-                Row(
-                  children: [
-                    _buildFilterTab('Todos', 'todos'),
-                    const SizedBox(width: 20),
-                    _buildFilterTab('Activos', 'activo'),
-                    const SizedBox(width: 20),
-                    _buildFilterTab('Pendientes', 'pendiente'),
-                    const SizedBox(width: 20),
-                    _buildFilterTab('Inactivos', 'inactivo'),
-                  ],
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: _onSearchChanged,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'Buscar socio por nombre o DNI...',
+                      hintStyle: const TextStyle(color: Color(0xFF6B7B84), fontSize: 12),
+                      prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF8F9CA3), size: 19),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, color: Color(0xFF8F9CA3), size: 16),
+                              onPressed: () {
+                                _searchController.clear();
+                                _onSearchChanged('');
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                    ),
+                  ),
                 ),
 
                 const SizedBox(height: 14),
 
-                // 5. Listado de socios
+                // 3. Barra unificada de métricas (Compacta, interactiva y sin desbordes)
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF161E22),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFF243037), width: 1),
+                  ),
+                  child: Row(
+                    children: [
+                      _buildStatColumn('Total', _stats.total.toString(), Colors.white, 'todos'),
+                      _buildStatDivider(),
+                      _buildStatColumn('Activos', _stats.activos.toString(), const Color(0xFF00E676), 'activo'),
+                      _buildStatDivider(),
+                      _buildStatColumn('Pendientes', _stats.pendientes.toString(), const Color(0xFFF59E0B), 'pendiente'),
+                      _buildStatDivider(),
+                      _buildStatColumn('Inactivos', _stats.inactivos.toString(), const Color(0xFFEF4444), 'inactivo'),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                // 4. Pestañas de filtro rápidas
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildFilterTab('Todos', 'todos'),
+                      const SizedBox(width: 16),
+                      _buildFilterTab('Activos', 'activo'),
+                      const SizedBox(width: 16),
+                      _buildFilterTab('Pendientes', 'pendiente'),
+                      const SizedBox(width: 16),
+                      _buildFilterTab('Inactivos', 'inactivo'),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                // 5. Listado de socios con diseño espacioso y sin overflows
                 if (_isLoading)
                   const Center(
                     child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 40),
+                      padding: EdgeInsets.symmetric(vertical: 36),
                       child: CircularProgressIndicator(color: Color(0xFF00E676)),
                     ),
                   )
@@ -501,20 +506,20 @@ class _SociosScreenState extends State<SociosScreen> {
                     alignment: Alignment.center,
                     child: const Text(
                       'No se encontraron socios para este filtro.',
-                      style: TextStyle(color: Color(0xFF8F9CA3), fontSize: 14),
+                      style: TextStyle(color: Color(0xFF8F9CA3), fontSize: 13),
                     ),
                   )
                 else
                   ..._socios.map((socio) => _buildSocioCard(socio)),
 
-                const SizedBox(height: 14),
+                const SizedBox(height: 10),
 
-                // 6. Paginación
+                // 6. Paginación compacta
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Mostrando 1 - ${_socios.length} de $_totalSocios socios',
+                      '${_socios.length} de $_totalSocios socios',
                       style: const TextStyle(color: Color(0xFF8F9CA3), fontSize: 12),
                     ),
                     Row(
@@ -531,10 +536,14 @@ class _SociosScreenState extends State<SociosScreen> {
                         ),
                         const SizedBox(width: 4),
                         _buildPageNumberButton(1, _currentPage == 1),
-                        const SizedBox(width: 4),
-                        _buildPageNumberButton(2, _currentPage == 2),
-                        const SizedBox(width: 4),
-                        _buildPageNumberButton(3, _currentPage == 3),
+                        if (_totalPages >= 2) ...[
+                          const SizedBox(width: 4),
+                          _buildPageNumberButton(2, _currentPage == 2),
+                        ],
+                        if (_totalPages >= 3) ...[
+                          const SizedBox(width: 4),
+                          _buildPageNumberButton(3, _currentPage == 3),
+                        ],
                         const SizedBox(width: 4),
                         _buildPageNavButton(
                           icon: Icons.chevron_right_rounded,
@@ -550,7 +559,7 @@ class _SociosScreenState extends State<SociosScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
               ],
             ),
           ),
@@ -559,68 +568,57 @@ class _SociosScreenState extends State<SociosScreen> {
     );
   }
 
-  Widget _buildMetricCard({
-    required IconData icon,
-    required Color iconColor,
-    required String value,
-    required String label,
-    required String subtext,
-    required Color subtextColor,
-  }) {
-    return Container(
-      width: 104,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF161E22),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF243037), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Icon(icon, color: iconColor, size: 20),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildStatColumn(String label, String value, Color color, String tabValue) {
+    final isSelected = _selectedTab == tabValue;
+    return Expanded(
+      child: InkWell(
+        onTap: () => _onTabChanged(tabValue),
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF1E282D) : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 value,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 17,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 label,
-                style: const TextStyle(
-                  color: Color(0xFF8F9CA3),
+                style: TextStyle(
+                  color: isSelected ? Colors.white : const Color(0xFF8F9CA3),
                   fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
-          Text(
-            subtext,
-            style: TextStyle(
-              color: subtextColor,
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildStatDivider() {
+    return Container(
+      width: 1,
+      height: 28,
+      color: const Color(0xFF243037),
     );
   }
 
   Widget _buildFilterTab(String label, String value) {
     final isSelected = _selectedTab == value;
-
     return GestureDetector(
       onTap: () => _onTabChanged(value),
       child: Column(
@@ -630,14 +628,14 @@ class _SociosScreenState extends State<SociosScreen> {
             label,
             style: TextStyle(
               color: isSelected ? const Color(0xFF00E676) : const Color(0xFF8F9CA3),
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 5),
           Container(
-            height: 2.5,
-            width: 24,
+            height: 2,
+            width: 22,
             decoration: BoxDecoration(
               color: isSelected ? const Color(0xFF00E676) : Colors.transparent,
               borderRadius: BorderRadius.circular(2),
@@ -648,137 +646,189 @@ class _SociosScreenState extends State<SociosScreen> {
     );
   }
 
+  // Tarjeta de socio optimizada, moderna y sin desbordes
   Widget _buildSocioCard(SocioModel socio) {
     Color badgeBg;
+    Color badgeBorder;
     Color badgeText;
     String badgeLabel;
 
     if (socio.isActivo) {
-      badgeBg = const Color(0xFF133820);
+      badgeBg = const Color(0xFF0F381E);
+      badgeBorder = const Color(0xFF1B5E20);
       badgeText = const Color(0xFF00E676);
       badgeLabel = 'Activo';
     } else if (socio.isPendiente) {
-      badgeBg = const Color(0xFF3E2E14);
+      badgeBg = const Color(0xFF382A0F);
+      badgeBorder = const Color(0xFFB45309);
       badgeText = const Color(0xFFF59E0B);
       badgeLabel = 'Pendiente';
     } else {
-      badgeBg = const Color(0xFF3E1818);
+      badgeBg = const Color(0xFF381414);
+      badgeBorder = const Color(0xFFB91C1C);
       badgeText = const Color(0xFFEF4444);
       badgeLabel = 'Inactivo';
     }
 
-    final isVencido = socio.fechaVencimiento?.toLowerCase().contains('vencid') == true;
+    final isVencido = socio.fechaVencimiento?.toLowerCase().contains('vencid') == true || socio.isInactivo;
+
+    final initials = (socio.nombre.isNotEmpty ? socio.nombre[0] : '') +
+        (socio.apellido.isNotEmpty ? socio.apellido[0] : '');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: const Color(0xFF161E22),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFF243037), width: 1),
       ),
-      child: Row(
-        children: [
-          // Avatar con icono de usuario
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.transparent,
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF00E676).withValues(alpha: 0.7), width: 1.5),
-            ),
-            child: const Icon(
-              Icons.person_outline_rounded,
-              color: Color(0xFF00E676),
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 14),
-
-          // Nombre, DNI y Teléfono
-          Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => _showSocioDetailModal(socio),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  socio.nombreCompleto.isNotEmpty ? socio.nombreCompleto : 'Socio',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  'DNI: ${socio.dni}',
-                  style: const TextStyle(
-                    color: Color(0xFF8F9CA3),
-                    fontSize: 12,
-                  ),
-                ),
-                if (socio.telefono != null && socio.telefono!.isNotEmpty) ...[
-                  const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      const Icon(Icons.phone, color: Color(0xFF8F9CA3), size: 12),
-                      const SizedBox(width: 4),
-                      Text(
-                        socio.telefono!,
-                        style: const TextStyle(
-                          color: Color(0xFF8F9CA3),
-                          fontSize: 12,
+                // Fila Superior: Avatar + Nombre / DNI + Badge
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Avatar con iniciales
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00E676).withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFF00E676).withValues(alpha: 0.4),
+                          width: 1.2,
                         ),
                       ),
-                    ],
-                  ),
-                ],
+                      alignment: Alignment.center,
+                      child: Text(
+                        initials.isNotEmpty ? initials.toUpperCase() : 'S',
+                        style: const TextStyle(
+                          color: Color(0xFF00E676),
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+
+                    // Nombre y DNI
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            socio.nombreCompleto.isNotEmpty ? socio.nombreCompleto : 'Socio',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Text(
+                                'DNI: ${socio.dni}',
+                                style: const TextStyle(
+                                  color: Color(0xFF8F9CA3),
+                                  fontSize: 12,
+                                ),
+                              ),
+                              if (socio.telefono != null && socio.telefono!.isNotEmpty) ...[
+                                const Text(' • ', style: TextStyle(color: Color(0xFF5A6B74), fontSize: 12)),
+                                Expanded(
+                                  child: Text(
+                                    socio.telefono!,
+                                    style: const TextStyle(
+                                      color: Color(0xFF8F9CA3),
+                                      fontSize: 12,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    // Badge de Estado
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: badgeBg,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: badgeBorder, width: 0.8),
+                      ),
+                      child: Text(
+                        badgeLabel,
+                        style: TextStyle(
+                          color: badgeText,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 9),
+
+                // Línea separadora sutil
+                const Divider(height: 1, color: Color(0xFF222C31)),
+
+                const SizedBox(height: 7),
+
+                // Fila Inferior: Plan + Vencimiento + Flecha
+                Row(
+                  children: [
+                    const Icon(Icons.card_membership_rounded, size: 13, color: Color(0xFF8F9CA3)),
+                    const SizedBox(width: 4),
+                    Text(
+                      socio.plan ?? 'Plan Mensual',
+                      style: const TextStyle(
+                        color: Color(0xFF8F9CA3),
+                        fontSize: 11.5,
+                      ),
+                    ),
+                    const Spacer(),
+                    Icon(
+                      isVencido ? Icons.error_outline_rounded : Icons.event_available_rounded,
+                      size: 13,
+                      color: isVencido ? const Color(0xFFEF4444) : const Color(0xFF00E676),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      socio.fechaVencimiento ?? '25 May 2026',
+                      style: TextStyle(
+                        color: isVencido ? const Color(0xFFEF4444) : const Color(0xFF00E676),
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.chevron_right, size: 15, color: Color(0xFF5A6B74)),
+                  ],
+                ),
               ],
             ),
           ),
-
-          // Estado, Plan, Vencimiento y Flecha
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                decoration: BoxDecoration(
-                  color: badgeBg,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  badgeLabel,
-                  style: TextStyle(
-                    color: badgeText,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                socio.plan ?? 'Plan Mensual',
-                style: const TextStyle(
-                  color: Color(0xFF8F9CA3),
-                  fontSize: 11,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                socio.fechaVencimiento ?? 'Vence 25 May 2026',
-                style: TextStyle(
-                  color: isVencido ? const Color(0xFFEF4444) : const Color(0xFF00E676),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(width: 6),
-          const Icon(Icons.chevron_right, color: Color(0xFF6B7B84), size: 20),
-        ],
+        ),
       ),
     );
   }
@@ -790,8 +840,8 @@ class _SociosScreenState extends State<SociosScreen> {
         _loadData();
       },
       child: Container(
-        width: 28,
-        height: 28,
+        width: 26,
+        height: 26,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: isActive ? const Color(0xFF00E676) : const Color(0xFF1E282D),
@@ -801,7 +851,7 @@ class _SociosScreenState extends State<SociosScreen> {
           page.toString(),
           style: TextStyle(
             color: isActive ? Colors.black : Colors.white70,
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -817,16 +867,16 @@ class _SociosScreenState extends State<SociosScreen> {
     return GestureDetector(
       onTap: enabled ? onPressed : null,
       child: Container(
-        width: 28,
-        height: 28,
+        width: 26,
+        height: 26,
         alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E282D),
+        decoration: const BoxDecoration(
+          color: Color(0xFF1E282D),
           shape: BoxShape.circle,
         ),
         child: Icon(
           icon,
-          size: 16,
+          size: 15,
           color: enabled ? Colors.white : Colors.white24,
         ),
       ),

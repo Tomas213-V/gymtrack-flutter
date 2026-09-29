@@ -23,9 +23,7 @@ const supabaseKey = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY ||
 
 // Validación: verificamos que ambas variables existan antes de inicializar el cliente
 if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ Error: Faltan las variables de entorno de Supabase (SUPABASE_URL y SUPABASE_KEY en backend/.env).');
-} else if (supabaseUrl.includes('your-project-id') || supabaseKey.includes('your-supabase-anon')) {
-  console.error('⚠️ ALERTA: backend/.env contiene valores de ejemplo ("your-project-id"). Debes reemplazarlos con la URL y API Key reales de tu proyecto Supabase.');
+  console.error('❌ Error: Faltan las variables de entorno de Supabase (SUPABASE_URL y SUPABASE_KEY en .env).');
 }
 
 // Creamos la instancia del cliente de Supabase con las credenciales cargadas.
@@ -36,3 +34,4 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // Exportamos la instancia para que pueda ser reutilizada en controladores, servicios y rutas
 // siguiendo el patrón singleton (una sola conexión compartida en toda la app)
 module.exports = supabase;
+

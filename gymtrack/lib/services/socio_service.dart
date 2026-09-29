@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../models/perfil_socio_model.dart';
 import '../models/socio_model.dart';
 import 'api_config.dart';
 import 'auth_service.dart';
+
 
 class SocioService {
   static final SocioService _instance = SocioService._internal();
@@ -16,7 +18,7 @@ class SocioService {
           nombre: 'Luciano',
           apellido: 'Gracia',
           dni: '41.234.567',
-          telefono: '11 2345 6789',
+          telefono: '11-2345-6789',
           estado: 'activo',
           plan: 'Plan Mensual',
           fechaVencimiento: '25 May 2026',
@@ -26,7 +28,7 @@ class SocioService {
           nombre: 'Camila',
           apellido: 'Rodriguez',
           dni: '41.234.567',
-          telefono: '11 2345 6789',
+          telefono: '11-2345-6789',
           estado: 'pendiente',
           plan: 'Plan Mensual',
           fechaVencimiento: '26 May 2026',
@@ -36,7 +38,7 @@ class SocioService {
           nombre: 'Nicolás',
           apellido: 'Torres',
           dni: '41.234.567',
-          telefono: '11 2345 6789',
+          telefono: '11-2345-6789',
           estado: 'activo',
           plan: 'Plan Trimestral',
           fechaVencimiento: '25 May 2026',
@@ -46,7 +48,7 @@ class SocioService {
           nombre: 'Martina',
           apellido: 'Lopez',
           dni: '41.234.567',
-          telefono: '11 2345 6789',
+          telefono: '11-2345-6789',
           estado: 'inactivo',
           plan: 'Plan Mensual',
           fechaVencimiento: 'Vencido el 15 abr 2026',
@@ -56,7 +58,7 @@ class SocioService {
           nombre: 'Valentina',
           apellido: 'Gomez',
           dni: '41.234.567',
-          telefono: '11 2345 6789',
+          telefono: '11-2345-6789',
           estado: 'activo',
           plan: 'Plan Mensual',
           fechaVencimiento: '25 May 2026',
@@ -210,4 +212,81 @@ class SocioService {
       return false;
     }
   }
+
+  /// Obtiene el perfil completo del socio desde el backend
+  Future<PerfilSocioModel?> getPerfilSocio({int? idSocio}) async {
+    final token = AuthService().token;
+    try {
+      final queryParams = <String, String>{};
+      if (idSocio != null) {
+        queryParams['id'] = idSocio.toString();
+      }
+      final uri = Uri.parse(ApiConfig.perfilSocioUrl).replace(
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+      );
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return PerfilSocioModel.fromJson(data);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Actualiza los datos de perfil del socio (incluyendo posible cambio de contraseña)
+  Future<Map<String, dynamic>> updatePerfilSocio({
+    int? idSocio,
+    String? nombre,
+    String? apellido,
+    String? telefono,
+    String? email,
+    String? contrasenaActual,
+    String? nuevaContrasena,
+  }) async {
+    final token = AuthService().token;
+    try {
+      final uri = Uri.parse(ApiConfig.perfilSocioUrl);
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final body = <String, dynamic>{};
+      if (idSocio != null) body['id_socio'] = idSocio;
+      if (nombre != null && nombre.trim().isNotEmpty) body['nombre'] = nombre.trim();
+      if (apellido != null && apellido.trim().isNotEmpty) body['apellido'] = apellido.trim();
+      if (telefono != null) body['telefono'] = telefono.trim();
+      if (email != null && email.trim().isNotEmpty) body['email'] = email.trim();
+      if (contrasenaActual != null && contrasenaActual.isNotEmpty) {
+        body['contrasena_actual'] = contrasenaActual;
+      }
+      if (nuevaContrasena != null && nuevaContrasena.isNotEmpty) {
+        body['nueva_contrasena'] = nuevaContrasena;
+      }
+
+      final response = await http
+          .put(uri, headers: headers, body: jsonEncode(body))
+          .timeout(const Duration(seconds: 10));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'mensaje': data['mensaje'] ?? 'Perfil actualizado'};
+      } else {
+        return {'success': false, 'error': data['error'] ?? 'Error al actualizar perfil'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
 }
+

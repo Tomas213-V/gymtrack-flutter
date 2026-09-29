@@ -3,36 +3,16 @@ const supabase = require('../config/supabase');
 // 1. GET /api/pagos (Listado, Paginación y Filtros)
 const getPagos = async (req, res) => {
   try {
-    const { page = 1, limit = 10, estado, desde, hasta } = req.query;
-    let id_gimnasio = req.query.id_gimnasio || req.usuario?.id_gimnasio;
-    if (!id_gimnasio && req.usuario?.id_usuario) {
-      const { data: gym } = await supabase
-        .from('gimnasio')
-        .select('id_gimnasio')
-        .eq('id_usuario', req.usuario.id_usuario)
-        .maybeSingle();
-      if (gym) id_gimnasio = gym.id_gimnasio;
-    }
+    const { page = 1, limit = 10, estado, desde, hasta, id_gimnasio } = req.query;
     const offset = (page - 1) * limit;
 
-    let query = supabase
-      .from('pago')
-      .select('*, membresia(*, socio(*, usuario(nombre, apellido)))', { count: 'exact' })
-      .order('id_pago', { ascending: false })
-      .range(offset, offset + Number(limit) - 1);
-
-    if (estado && estado !== 'todos') query = query.eq('estado', estado);
-    if (desde) query = query.gte('fecha_pago', desde);
-    if (hasta) query = query.lte('fecha_pago', hasta);
-
-    let targetData = null;
+    let targetData = [];
     let targetCount = 0;
 
-    // Si se indicó un gimnasio, buscar primero si tiene pagos asociados
     if (id_gimnasio) {
       let gymQuery = supabase
         .from('pago')
-        .select('*, membresia!inner(*, socio!inner(*, usuario(nombre, apellido)))', { count: 'exact' })
+        .select('*, membresia!inner(*, plan_membresia(*), socio!inner(*))', { count: 'exact' })
         .order('id_pago', { ascending: false })
         .range(offset, offset + Number(limit) - 1)
         .eq('membresia.socio.id_gimnasio', id_gimnasio);
@@ -42,25 +22,32 @@ const getPagos = async (req, res) => {
       if (hasta) gymQuery = gymQuery.lte('fecha_pago', hasta);
 
       const { data: gymData, count: gymCount, error: gymErr } = await gymQuery;
-      if (!gymErr && gymData && gymData.length > 0) {
-        targetData = gymData;
-        targetCount = gymCount;
-      }
-    }
+      if (gymErr) throw gymErr;
 
-    // Fallback: si no hay pagos específicos para ese gym o no se pasó id_gimnasio, devolver pagos disponibles
-    if (!targetData) {
+      targetData = gymData || [];
+      targetCount = gymCount || 0;
+    } else {
+      let query = supabase
+        .from('pago')
+        .select('*, membresia(*, plan_membresia(*), socio(*))', { count: 'exact' })
+        .order('id_pago', { ascending: false })
+        .range(offset, offset + Number(limit) - 1);
+
+      if (estado && estado !== 'todos') query = query.eq('estado', estado);
+      if (desde) query = query.gte('fecha_pago', desde);
+      if (hasta) query = query.lte('fecha_pago', hasta);
+
       const { data, count, error } = await query;
       if (error) throw error;
-      targetData = data;
-      targetCount = count;
+      targetData = data || [];
+      targetCount = count || 0;
     }
 
     return res.status(200).json({
       total: targetCount,
       pagina: Number(page),
       limite: Number(limit),
-      datos: targetData || []
+      datos: targetData
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -70,18 +57,9 @@ const getPagos = async (req, res) => {
 // 2. GET /api/pagos/resumen (Tarjetas de métricas)
 const getResumenPagos = async (req, res) => {
   try {
-    const { desde, hasta } = req.query;
-    let id_gimnasio = req.query.id_gimnasio || req.usuario?.id_gimnasio;
-    if (!id_gimnasio && req.usuario?.id_usuario) {
-      const { data: gym } = await supabase
-        .from('gimnasio')
-        .select('id_gimnasio')
-        .eq('id_usuario', req.usuario.id_usuario)
-        .maybeSingle();
-      if (gym) id_gimnasio = gym.id_gimnasio;
-    }
+    const { desde, hasta, id_gimnasio } = req.query;
 
-    let targetData = null;
+    let targetData = [];
 
     if (id_gimnasio) {
       let gymQuery = supabase
@@ -93,12 +71,9 @@ const getResumenPagos = async (req, res) => {
       if (hasta) gymQuery = gymQuery.lte('fecha_pago', hasta);
 
       const { data: gymData, error: gymErr } = await gymQuery;
-      if (!gymErr && gymData && gymData.length > 0) {
-        targetData = gymData;
-      }
-    }
-
-    if (!targetData) {
+      if (gymErr) throw gymErr;
+      targetData = gymData || [];
+    } else {
       let query = supabase
         .from('pago')
         .select('monto, estado, membresia(socio(id_gimnasio))');
@@ -111,7 +86,7 @@ const getResumenPagos = async (req, res) => {
       targetData = data || [];
     }
 
-    const resumen = (targetData || []).reduce((acc, pago) => {
+    const resumen = targetData.reduce((acc, pago) => {
       const estadoNorm = (pago.estado || '').toLowerCase();
       if (estadoNorm === 'pagado') {
         acc.total_recaudado += Number(pago.monto);
@@ -130,29 +105,82 @@ const getResumenPagos = async (req, res) => {
   }
 };
 
-// 3. GET /api/pagos/membresias (Listado de membresías y socios para registrar pagos)
+// 3. GET /api/pagos/membresias (Listado de socios y membresías del gimnasio para registrar pagos)
 const getMembresias = async (req, res) => {
   try {
     const { id_gimnasio } = req.query;
 
-    if (id_gimnasio) {
-      const { data: gymMemb, error: gymErr } = await supabase
-        .from('membresia')
-        .select('id_membresia, tipo, precio, estado, socio!inner(id_socio, dni, id_gimnasio, usuario(nombre, apellido))')
-        .eq('socio.id_gimnasio', id_gimnasio);
+    let query = supabase
+      .from('socio')
+      .select(`
+        id_socio,
+        dni,
+        telefono,
+        nombre,
+        apellido,
+        email,
+        estado,
+        id_gimnasio,
+        membresia (
+          id_membresia,
+          precio,
+          fecha_inicio,
+          fecha_vencimiento,
+          estado,
+          id_plan_membresia,
+          plan_membresia (
+            id_plan_membresia,
+            nombre,
+            precio,
+            duracion_dias
+          )
+        )
+      `)
+      .order('id_socio', { ascending: false });
 
-      if (!gymErr && gymMemb && gymMemb.length > 0) {
-        return res.status(200).json(gymMemb);
-      }
+    if (id_gimnasio) {
+      query = query.eq('id_gimnasio', id_gimnasio);
     }
 
-    // Fallback general si no hay miembros registrados específicamente en ese gimnasio
-    const { data, error } = await supabase
-      .from('membresia')
-      .select('id_membresia, tipo, precio, estado, socio(id_socio, dni, id_gimnasio, usuario(nombre, apellido))');
-
+    const { data: socios, error } = await query;
     if (error) throw error;
-    return res.status(200).json(data || []);
+
+    const resultado = (socios || []).map((s) => {
+      const membList = Array.isArray(s.membresia) 
+        ? s.membresia 
+        : (s.membresia ? [s.membresia] : []);
+
+      const membresiaActiva = membList.length > 0
+        ? (membList.find(m => m.estado === 'activo') || membList[0])
+        : null;
+
+      return {
+        id_socio: s.id_socio,
+        dni: s.dni,
+        telefono: s.telefono,
+        nombre: s.nombre,
+        apellido: s.apellido,
+        email: s.email,
+        estado_socio: s.estado,
+        id_gimnasio: s.id_gimnasio,
+        socio: {
+          id_socio: s.id_socio,
+          dni: s.dni,
+          nombre: s.nombre,
+          apellido: s.apellido,
+          email: s.email,
+          id_gimnasio: s.id_gimnasio
+        },
+        id_membresia: membresiaActiva ? membresiaActiva.id_membresia : null,
+        precio: membresiaActiva?.precio != null ? membresiaActiva.precio : (membresiaActiva?.plan_membresia?.precio || null),
+        fecha_vencimiento: membresiaActiva?.fecha_vencimiento || null,
+        estado: membresiaActiva?.estado || 'sin_membresia',
+        id_plan_membresia: membresiaActiva?.id_plan_membresia || null,
+        plan_membresia: membresiaActiva?.plan_membresia || null
+      };
+    });
+
+    return res.status(200).json(resultado);
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -164,7 +192,7 @@ const getPagoById = async (req, res) => {
     const { id } = req.params;
     const { data, error } = await supabase
       .from('pago')
-      .select('*, membresia(*, socio(*, usuario(nombre, apellido, email))))')
+      .select('*, membresia(*, plan_membresia(*), socio(*))')
       .eq('id_pago', id)
       .single();
 
@@ -180,7 +208,9 @@ const getPagoById = async (req, res) => {
 const registrarPago = async (req, res) => {
   try {
     let { 
+      id_socio,
       id_membresia, 
+      id_plan_membresia,
       monto, 
       fecha_pago, 
       metodo_pago, 
@@ -208,45 +238,43 @@ const registrarPago = async (req, res) => {
       return res.status(400).json({ error: 'El estado no es un valor permitido.' });
     }
 
-    // Si no se proporcionó id_membresia pero sí datos de socio/DNI
-    if (!id_membresia && dniSocio) {
-      const cleanDni = dniSocio.trim();
-      let { data: socioExistente } = await supabase
+    let socioId = id_socio || null;
+
+    // Si no se proporcionó id_socio pero sí DNI, buscar socio existente en este gimnasio
+    if (!socioId && dniSocio) {
+      const cleanDni = String(dniSocio).trim();
+      let socioQuery = supabase
         .from('socio')
-        .select('id_socio, id_gimnasio, usuario(nombre, apellido)')
-        .eq('dni', cleanDni)
-        .maybeSingle();
+        .select('id_socio, id_gimnasio, nombre, apellido')
+        .eq('dni', cleanDni);
 
-      let socioId = socioExistente?.id_socio;
+      if (id_gimnasio) {
+        socioQuery = socioQuery.eq('id_gimnasio', id_gimnasio);
+      }
 
-      if (!socioExistente) {
-        const partesNombre = (nombreSocio || 'Socio General').trim().split(' ');
+      const { data: socioExistente } = await socioQuery.maybeSingle();
+
+      if (socioExistente) {
+        socioId = socioExistente.id_socio;
+      } else {
+        // Registrar nuevo socio directamente en el gimnasio actual
+        const partesNombre = (nombreSocio || 'Socio').trim().split(' ');
         const nombre = partesNombre[0] || 'Socio';
-        const apellido = partesNombre.slice(1).join(' ') || 'Gym';
-        const gymId = id_gimnasio || 20;
+        const apellido = partesNombre.slice(1).join(' ') || '';
+        const gymId = id_gimnasio;
 
-        const { data: nuevoUser, error: errUser } = await supabase
-          .from('usuario')
-          .insert([{
-            nombre,
-            apellido,
-            email: `${cleanDni}@gymtrack.local`,
-            contrasena: 'socio_default_pass',
-            rol: 'socio',
-            estado: 'activo'
-          }])
-          .select('id_usuario')
-          .single();
-
-        if (errUser) throw errUser;
+        if (!gymId) {
+          return res.status(400).json({ error: 'No se identificó el gimnasio para registrar el nuevo socio.' });
+        }
 
         const { data: nuevoSocio, error: errSocio } = await supabase
           .from('socio')
           .insert([{
-            id_usuario: nuevoUser.id_usuario,
             id_gimnasio: gymId,
+            nombre,
+            apellido,
             dni: cleanDni,
-            telefono: '1100000000',
+            telefono: 'Sin teléfono',
             fecha_alta: new Date().toISOString().split('T')[0],
             estado: 'activo'
           }])
@@ -256,27 +284,96 @@ const registrarPago = async (req, res) => {
         if (errSocio) throw errSocio;
         socioId = nuevoSocio.id_socio;
       }
+    }
 
-      // Buscar si ya tiene membresía o crear una nueva
+    if (!socioId && !id_membresia) {
+      return res.status(400).json({ error: 'Debes seleccionar o registrar un socio para procesar el pago.' });
+    }
+
+    // Gestionar membresía asociada
+    if (!id_membresia && socioId) {
+      // Buscar si el socio ya tiene membresía activa
       let { data: membExistente } = await supabase
         .from('membresia')
-        .select('id_membresia')
+        .select('id_membresia, id_plan_membresia')
         .eq('id_socio', socioId)
+        .eq('estado', 'activo')
         .maybeSingle();
 
       if (membExistente) {
         id_membresia = membExistente.id_membresia;
       } else {
+        // Resolver id_plan_membresia
+        let planId = id_plan_membresia;
+        let duracionDias = 30;
+
+        if (planId) {
+          const { data: pObj } = await supabase
+            .from('plan_membresia')
+            .select('duracion_dias')
+            .eq('id_plan_membresia', planId)
+            .maybeSingle();
+          if (pObj?.duracion_dias) duracionDias = pObj.duracion_dias;
+        } else if (plan) {
+          let pQuery = supabase
+            .from('plan_membresia')
+            .select('id_plan_membresia, duracion_dias')
+            .ilike('nombre', `%${plan}%`);
+          if (id_gimnasio) {
+            pQuery = pQuery.eq('id_gimnasio', id_gimnasio);
+          }
+          const { data: pFound } = await pQuery.limit(1).maybeSingle();
+          if (pFound) {
+            planId = pFound.id_plan_membresia;
+            if (pFound.duracion_dias) duracionDias = pFound.duracion_dias;
+          }
+        }
+
+        if (!planId) {
+          let pDefQuery = supabase
+            .from('plan_membresia')
+            .select('id_plan_membresia, duracion_dias');
+          if (id_gimnasio) {
+            pDefQuery = pDefQuery.eq('id_gimnasio', id_gimnasio);
+          }
+          const { data: pDef } = await pDefQuery.limit(1).maybeSingle();
+          if (pDef) {
+            planId = pDef.id_plan_membresia;
+            if (pDef.duracion_dias) duracionDias = pDef.duracion_dias;
+          } else if (id_gimnasio) {
+            const { data: pNuevo } = await supabase
+              .from('plan_membresia')
+              .insert([{
+                id_gimnasio: Number(id_gimnasio),
+                nombre: plan || 'Plan Premium',
+                precio: Number(monto) || 18000,
+                duracion_dias: 30,
+                estado: 'Activo'
+              }])
+              .select('id_plan_membresia, duracion_dias')
+              .single();
+
+            if (pNuevo) {
+              planId = pNuevo.id_plan_membresia;
+              duracionDias = pNuevo.duracion_dias || 30;
+            }
+          }
+        }
+
+        const nuevaMembData = {
+          id_socio: socioId,
+          precio: Number(monto),
+          fecha_inicio: fecha_pago,
+          fecha_vencimiento: new Date(Date.now() + duracionDias * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          estado: estado === 'pagado' ? 'activo' : (estado === 'vencido' ? 'vencido' : 'activo')
+        };
+        if (planId) {
+          nuevaMembData.id_plan_membresia = planId;
+        }
+
         const { data: nuevaMemb, error: errMemb } = await supabase
           .from('membresia')
-          .insert([{
-            id_socio: socioId,
-            tipo: plan || 'Plan Básico',
-            precio: Number(monto),
-            fecha_inicio: fecha_pago,
-            fecha_vencimiento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            estado: 'activo'
-          }])
+          .insert([nuevaMembData])
           .select('id_membresia')
           .single();
 
@@ -285,28 +382,24 @@ const registrarPago = async (req, res) => {
       }
     }
 
-    // Si aún no hay id_membresia, tomar la primera existente como fallback
     if (!id_membresia) {
-      const { data: membDefault } = await supabase.from('membresia').select('id_membresia').limit(1).single();
-      id_membresia = membDefault?.id_membresia;
-    }
-
-    if (!id_membresia) {
-      return res.status(400).json({ error: 'No se encontró una membresía para asociar el pago.' });
+      return res.status(400).json({ error: 'No se pudo vincular una membresía para este socio.' });
     }
 
     // Inserción en tabla pago
+    const insertPago = {
+      id_membresia,
+      monto: Number(monto),
+      fecha_pago,
+      metodo_pago: metodo_pago.toLowerCase(),
+      estado: estado.toLowerCase(),
+      comprobante: comprobante || null
+    };
+
     const { data: pagoCreado, error: errPago } = await supabase
       .from('pago')
-      .insert([{ 
-        id_membresia, 
-        monto: Number(monto), 
-        fecha_pago, 
-        metodo_pago, 
-        estado: estado.toLowerCase(),
-        comprobante: comprobante || null
-      }])
-      .select('*, membresia(*, socio(*, usuario(nombre, apellido))))')
+      .insert([insertPago])
+      .select('*, membresia(*, plan_membresia(*), socio(*))')
       .single();
 
     if (errPago) throw errPago;
@@ -334,7 +427,7 @@ const actualizarEstadoPago = async (req, res) => {
       .from('pago')
       .update({ estado: nuevoEstado })
       .eq('id_pago', id)
-      .select('*, membresia(*, socio(*, usuario(nombre, apellido))))')
+      .select('*, membresia(*, plan_membresia(*), socio(*))')
       .single();
 
     if (error || !pagoActualizado) {
@@ -389,6 +482,45 @@ const eliminarPago = async (req, res) => {
   }
 };
 
+// 8. GET /api/pagos/planes (Listar planes de membresía disponibles)
+const getPlanes = async (req, res) => {
+  try {
+    const { id_gimnasio } = req.query;
+    let query = supabase
+      .from('plan_membresia')
+      .select('*')
+      .order('id_plan_membresia', { ascending: true });
+
+    if (id_gimnasio) {
+      query = query.eq('id_gimnasio', id_gimnasio);
+    }
+
+    let { data, error } = await query;
+    if (error) throw error;
+
+    // Si el gimnasio aún no tiene planes configurados, sembrar 3 planes iniciales
+    if ((!data || data.length === 0) && id_gimnasio) {
+      const planesIniciales = [
+        { id_gimnasio: Number(id_gimnasio), nombre: 'Plan Básico', precio: 15000, duracion_dias: 30, estado: 'Activo' },
+        { id_gimnasio: Number(id_gimnasio), nombre: 'Plan Premium', precio: 22000, duracion_dias: 30, estado: 'Activo' },
+        { id_gimnasio: Number(id_gimnasio), nombre: 'Pase Libre', precio: 28000, duracion_dias: 30, estado: 'Activo' }
+      ];
+      const { data: insertados, error: errInsert } = await supabase
+        .from('plan_membresia')
+        .insert(planesIniciales)
+        .select('*');
+
+      if (!errInsert && insertados) {
+        data = insertados;
+      }
+    }
+
+    return res.status(200).json(data || []);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getPagos,
   getPagoById,
@@ -396,5 +528,6 @@ module.exports = {
   actualizarEstadoPago,
   eliminarPago,
   getResumenPagos,
-  getMembresias
+  getMembresias,
+  getPlanes
 };

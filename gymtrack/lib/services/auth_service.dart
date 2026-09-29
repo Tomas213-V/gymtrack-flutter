@@ -84,6 +84,69 @@ class AuthService {
     }
   }
 
+  /// Inicia sesión de un Socio con email, DNI y contraseña
+  Future<AuthResponse> loginSocio({
+    required String email,
+    required String dni,
+    required String password,
+  }) async {
+    try {
+      final url = Uri.parse(ApiConfig.loginSocioUrl);
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'email': email.trim(),
+              'dni': dni.trim(),
+              'contrasena': password,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        _token = data['token'] as String?;
+        if (data['usuario'] != null) {
+          _currentUser = UserModel.fromJson(data['usuario']);
+        }
+        return AuthResponse(
+          success: true,
+          message: data['mensaje'] ?? 'Bienvenido/a a GymTrack.',
+          token: _token,
+          user: _currentUser,
+        );
+      } else {
+        final errorMsg = data['error'] ?? 'Credenciales inválidas.';
+        return AuthResponse(
+          success: false,
+          message: errorMsg,
+          error: errorMsg,
+        );
+      }
+    } on SocketException {
+      return AuthResponse(
+        success: false,
+        message: 'No se pudo conectar con el servidor en ${ApiConfig.baseUrl}. Verifica la conexión.',
+        error: 'Error de conexión',
+      );
+    } on TimeoutException {
+      return AuthResponse(
+        success: false,
+        message: 'El servidor tardó demasiado en responder.',
+        error: 'Timeout',
+      );
+    } catch (e) {
+      return AuthResponse(
+        success: false,
+        message: 'Error inesperado: $e',
+        error: e.toString(),
+      );
+    }
+  }
+
+
   /// Registra un nuevo usuario dueño (y opcionalmente su gimnasio)
   Future<AuthResponse> register({
     required String nombre,

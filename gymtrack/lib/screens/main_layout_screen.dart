@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../widgets/gym_app_bar.dart';
+import 'asistencia_screen.dart';
 import 'home_screen.dart';
 import 'menu_secciones_screen.dart';
 import 'pagos_screen.dart';
@@ -44,11 +45,7 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
       ),
       const SociosScreen(),
       const PagosScreen(),
-      _buildPlaceholderTab(
-        title: 'Asistencia',
-        icon: Icons.assignment_outlined,
-        description: 'Control de asistencia y accesos con código QR / DNI para socios.',
-      ),
+      const AsistenciaScreen(),
       MenuSeccionesScreen(
         user: widget.user,
       ),
@@ -118,51 +115,6 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPlaceholderTab({
-    required String title,
-    required IconData icon,
-    required String description,
-  }) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: const Color(0xFF00E676).withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: const Color(0xFF00E676), size: 36),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              description,
-              style: const TextStyle(
-                color: Color(0xFF8F9CA3),
-                fontSize: 13,
-                height: 1.4,
-              ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),

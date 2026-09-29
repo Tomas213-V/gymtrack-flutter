@@ -15,11 +15,17 @@ require("dotenv").config();
 
 // Cliente de Supabase: Instancia configurada para interactuar con la base de datos PostgreSQL en la nube
 const supabase = require("./src/config/supabase");
-// importa ruta
+// importa rutas
 const authRoutes = require("./src/routes/authRoutes");
 const pagoRoutes = require("./src/routes/pagoRoutes");
 const gimnasioRoutes = require("./src/routes/gimnasioRoutes");
 const socioRoutes = require("./src/routes/socioRoutes");
+const rutinaRoutes = require('./src/routes/rutinaRoutes');
+const ejercicioRoutes = require('./src/routes/ejercicioRoutes');
+const asistenciaRoutes = require('./src/routes/asistenciaRoutes');
+const planMembresiaRoutes = require('./src/routes/planMembresiaRoutes');
+const membresiaRoutes = require('./src/routes/membresiaRoutes');
+const dashboardSocioRoutes = require('./src/routes/dashboardSocioRoutes');
 
 // 2. INICIALIZACIÓN DE LA APLICACIÓN
 // Crea una instancia de la aplicación Express
@@ -64,13 +70,18 @@ app.get("/api/health", async (req, res) => {
         });
     }
 });
-// Registrar las rutas de Autenticación (/api/auth/register y /api/auth/login)
+
+// Registrar las rutas de la API
 app.use("/api/auth", authRoutes);
 app.use("/api/pagos", pagoRoutes);
 app.use("/api/gimnasios", gimnasioRoutes);
 app.use("/api/socios", socioRoutes);
-
-
+app.use('/api/rutinas', rutinaRoutes);
+app.use('/api/ejercicios', ejercicioRoutes);
+app.use('/api/asistencias', asistenciaRoutes);
+app.use('/api/planes-membresia', planMembresiaRoutes);
+app.use('/api/membresias', membresiaRoutes);
+app.use('/api/socio', dashboardSocioRoutes);
 
 // 5. CONFIGURACIÓN DEL PUERTO Y PUESTA EN MARCHA DEL SERVIDOR
 // Usa el puerto definido en el archivo .env (PORT), o el 3000 por defecto si no está especificado

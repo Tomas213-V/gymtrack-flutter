@@ -1,5 +1,4 @@
 const supabase = require('../config/supabase');
-const jwt = require('jsonwebtoken');
 
 /**
  * CONTROLADOR: CREAR GIMNASIO PARA UN USUARIO AUTENTICADO
@@ -54,23 +53,8 @@ const crearGimnasio = async (req, res) => {
       return res.status(500).json({ error: 'Error al registrar el gimnasio: ' + errGym.message });
     }
 
-    // Generar token actualizado con el nuevo id_gimnasio
-    const jwtSecret = process.env.JWT_SECRET || 'gymtrack_jwt_secret_key_2026';
-    const expiresIn = process.env.JWT_EXPIRES_IN || '24h';
-    const token = jwt.sign(
-      {
-        id_usuario: id_usuario,
-        id_gimnasio: nuevoGimnasio.id_gimnasio,
-        email: req.usuario?.email,
-        rol: req.usuario?.rol || 'dueño'
-      },
-      jwtSecret,
-      { expiresIn }
-    );
-
     return res.status(201).json({
       mensaje: 'Gimnasio registrado exitosamente.',
-      token,
       gimnasio: nuevoGimnasio
     });
   } catch (error) {
@@ -108,7 +92,47 @@ const obtenerMiGimnasio = async (req, res) => {
   }
 };
 
+/**
+ * CONTROLADOR: ACTUALIZAR EL GIMNASIO DEL USUARIO AUTENTICADO
+ */
+const actualizarMiGimnasio = async (req, res) => {
+  try {
+    const id_usuario = req.usuario?.id_usuario;
+    const { nombre, direccion, telefono, email } = req.body;
+
+    if (!id_usuario) {
+      return res.status(401).json({ error: 'No se pudo identificar al usuario autenticado.' });
+    }
+
+    const updateData = {};
+    if (nombre && nombre.trim()) updateData.nombre = nombre.trim();
+    if (direccion !== undefined) updateData.direccion = direccion ? direccion.trim() : null;
+    if (telefono !== undefined) updateData.telefono = telefono ? telefono.trim() : null;
+    if (email !== undefined) updateData.email = email ? email.trim().toLowerCase() : null;
+
+    const { data: gimnasio, error } = await supabase
+      .from('gimnasio')
+      .update(updateData)
+      .eq('id_usuario', id_usuario)
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      return res.status(500).json({ error: 'Error al actualizar el gimnasio: ' + error.message });
+    }
+
+    return res.status(200).json({
+      mensaje: 'Gimnasio actualizado correctamente.',
+      gimnasio
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Error interno del servidor: ' + error.message });
+  }
+};
+
 module.exports = {
   crearGimnasio,
-  obtenerMiGimnasio
+  obtenerMiGimnasio,
+  actualizarMiGimnasio
 };
+

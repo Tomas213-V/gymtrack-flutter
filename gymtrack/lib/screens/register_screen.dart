@@ -15,10 +15,7 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _nombreController = TextEditingController();
-  final _apellidoController = TextEditingController();
   final _emailController = TextEditingController();
-  final _gymNameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -26,10 +23,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
-    _nombreController.dispose();
-    _apellidoController.dispose();
     _emailController.dispose();
-    _gymNameController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -44,15 +38,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _isLoading = true;
     });
 
+    final email = _emailController.text.trim();
+    final nameFromEmail = email.contains('@') ? email.split('@')[0] : 'Usuario';
+    final formattedName = nameFromEmail.isNotEmpty
+        ? '${nameFromEmail[0].toUpperCase()}${nameFromEmail.substring(1)}'
+        : 'Usuario';
+
     final authService = AuthService();
     final response = await authService.register(
-      nombre: _nombreController.text.trim(),
-      apellido: _apellidoController.text.trim(),
-      email: _emailController.text.trim(),
+      nombre: formattedName,
+      apellido: '',
+      email: email,
       password: _passwordController.text,
-      nombreGimnasio: _gymNameController.text.trim().isNotEmpty
-          ? _gymNameController.text.trim()
-          : null,
+      nombreGimnasio: null,
     );
 
     if (!mounted) return;
@@ -73,7 +71,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final user = response.user!;
       final hasGym = user.gimnasio != null;
 
-      // Navegar según tenga o no gimnasio
+      // Navegar según tenga o no gimnasio configurado
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
           builder: (context) => hasGym
@@ -111,27 +109,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: AppTheme.primaryGreen),
           onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+        "",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.5,
+          ),
         ),
       ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
+              constraints: const BoxConstraints(maxWidth: 400),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Logo de GymTrack
-                  const GymLogo(size: 110),
-                  const SizedBox(height: 20),
+                  const GymLogo(size: 130),
+                  const SizedBox(height: 24),
 
                   // Tarjeta oscura del formulario
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 26),
                     decoration: BoxDecoration(
                       color: AppTheme.cardBackground,
                       borderRadius: BorderRadius.circular(22),
@@ -148,42 +156,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // 1. Campo de Nombre
-                          CustomTextField(
-                            controller: _nombreController,
-                            label: 'NOMBRE',
-                            hintText: 'Tu nombre',
-                            prefixIcon: Icons.badge_outlined,
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Por favor, ingresa tu nombre';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-
-                          // 2. Campo de Apellido
-                          CustomTextField(
-                            controller: _apellidoController,
-                            label: 'APELLIDO',
-                            hintText: 'Tu apellido',
-                            prefixIcon: Icons.badge_outlined,
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Por favor, ingresa tu apellido';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-
-                          // 3. Campo de Correo Electrónico
+                          // 1. Campo de Correo Electrónico
                           CustomTextField(
                             controller: _emailController,
                             label: 'CORREO ELECTRONICO',
                             hintText: 'tucorreo@gmail.com',
-                            prefixIcon: Icons.email_outlined,
+                            prefixIcon: Icons.person_outline,
                             keyboardType: TextInputType.emailAddress,
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
@@ -196,22 +174,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 18),
 
-                          // 4. Campo de Nombre de Gimnasio (Opcional)
-                          CustomTextField(
-                            controller: _gymNameController,
-                            label: 'NOMBRE DEL GIMNASIO (OPCIONAL)',
-                            hintText: 'Ej. PowerGym Fitness',
-                            prefixIcon: Icons.fitness_center_outlined,
-                          ),
-                          const SizedBox(height: 16),
-
-                          // 5. Campo de Contraseña
+                          // 2. Campo de Contraseña
                           CustomTextField(
                             controller: _passwordController,
                             label: 'CONTRASEÑA',
-                            hintText: 'Mínimo 6 caracteres',
+                            hintText: '**********',
                             prefixIcon: Icons.lock_outline,
                             isPassword: true,
                             validator: (value) {
@@ -224,13 +193,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 18),
 
-                          // 6. Campo de Repetir Contraseña
+                          // 3. Campo de Repetir Contraseña
                           CustomTextField(
                             controller: _confirmPasswordController,
                             label: 'REPETIR CONTRASEÑA',
-                            hintText: 'Confirma tu contraseña',
+                            hintText: '**********',
                             prefixIcon: Icons.lock_outline,
                             isPassword: true,
                             validator: (value) {
@@ -245,7 +214,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           const SizedBox(height: 24),
 
-                          // Botón REGISTRARSE (Verde oscuro)
+                          // Botón REGISTRARSE (Verde oscuro con borde y texto blanco en mayúsculas)
                           ElevatedButton(
                             onPressed: _isLoading ? null : _handleRegister,
                             style: ElevatedButton.styleFrom(
@@ -294,25 +263,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               );
                             },
                           ),
-                          const SizedBox(height: 14),
-
-                          // Enlace para volver a iniciar sesión
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text(
-                              '¿Ya tienes cuenta? Iniciar sesión',
-                              style: TextStyle(
-                                color: AppTheme.memberCyan,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 14),
+
+                  // Enlace discreto para volver al inicio de sesión
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text(
+                      '¿Ya tienes cuenta? Iniciar sesión',
+                      style: TextStyle(
+                        color: AppTheme.memberCyan,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
                 ],
               ),
             ),
@@ -322,4 +291,5 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
+
 

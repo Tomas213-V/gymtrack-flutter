@@ -30,6 +30,7 @@ class ApiConfig {
 
   // Endpoints de autenticación
   static String get loginUrl => '$baseUrl/api/auth/login';
+  static String get loginSocioUrl => '$baseUrl/api/auth/login-socio';
   static String get registerUrl => '$baseUrl/api/auth/register';
   static String get meUrl => '$baseUrl/api/auth/me';
   static String get healthUrl => '$baseUrl/api/health';
@@ -38,12 +39,25 @@ class ApiConfig {
   static String get gimnasiosUrl => '$baseUrl/api/gimnasios';
   static String get miGimnasioUrl => '$baseUrl/api/gimnasios/mi-gimnasio';
 
-  // Endpoints de socios
+  // Endpoints de socios y perfil
   static String get sociosUrl => '$baseUrl/api/socios';
   static String get sociosStatsUrl => '$baseUrl/api/socios/estadisticas';
+  static String get perfilSocioUrl => '$baseUrl/api/socios/perfil';
 
   // Endpoints de pagos
   static String get pagosUrl => '$baseUrl/api/pagos';
   static String get pagosResumenUrl => '$baseUrl/api/pagos/resumen';
   static String get pagosMembresiasUrl => '$baseUrl/api/pagos/membresias';
+
+  // Endpoints de asistencias
+  static String get asistenciasUrl => '$baseUrl/api/asistencias';
+  static String get asistenciasEstadisticasUrl => '$baseUrl/api/asistencias/estadisticas';
+
+  // Endpoints de rutinas y ejercicios
+  static String get rutinasUrl => '$baseUrl/api/rutinas';
+  static String get ejerciciosUrl => '$baseUrl/api/ejercicios';
+
+  // Endpoints de planes de membresía
+  static String get planesMembresiaUrl => '$baseUrl/api/planes-membresia';
 }
+

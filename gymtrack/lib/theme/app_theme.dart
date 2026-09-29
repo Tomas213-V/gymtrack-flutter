@@ -24,7 +24,14 @@ class AppTheme {
         onPrimary: Colors.black,
         onSurface: textWhite,
       ),
-      fontFamily: 'Roboto',
+      fontFamily: 'Segoe UI',
+      fontFamilyFallback: const [
+        'Segoe UI',
+        'Roboto',
+        'Arial',
+        'sans-serif',
+      ],
     );
   }
+
 }

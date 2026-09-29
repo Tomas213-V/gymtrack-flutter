@@ -2,23 +2,29 @@ const express = require('express');
 const router = express.Router();
 const { 
   getSocios, 
-  getSociosEstadisticas,
+  getPerfilSocio,
+  updatePerfilSocio,
   getSocioById, 
   createSocio, 
   updateSocio, 
-  changeEstadoSocio 
+  changeEstadoSocio,
+  deleteSocio
 } = require('../controllers/socioController');
 const { verifyToken } = require('../middlewares/authMiddleware');
 
 // Proteger todas las rutas exigiendo JWT
 router.use(verifyToken);
 
-// Endpoints definidos
+// Rutas de Perfil (declaradas antes de /:id para evitar capturas accidentales)
+router.get('/perfil', getPerfilSocio);
+router.put('/perfil', updatePerfilSocio);
+
+// Endpoints CRUD
 router.get('/', getSocios);
-router.get('/estadisticas', getSociosEstadisticas);
 router.get('/:id', getSocioById);
 router.post('/', createSocio);
 router.put('/:id', updateSocio);
 router.patch('/:id/estado', changeEstadoSocio);
+router.delete('/:id', deleteSocio);
 
 module.exports = router;
