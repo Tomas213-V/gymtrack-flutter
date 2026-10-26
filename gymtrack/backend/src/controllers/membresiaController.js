@@ -181,7 +181,7 @@ const updateMembresia = async (req, res) => {
   try {
     const idGimnasio = req.usuario?.id_gimnasio;
     const { id } = req.params;
-    const { estado, fecha_inicio, fecha_vencimiento, dias_extension, precio } = req.body;
+    const { estado, fecha_inicio, fecha_vencimiento, dias_extension, precio, id_plan_membresia } = req.body;
 
     // 1. Verificar que la membresía exista y pertenezca al gimnasio
     const { data: membActual, error: membErr } = await supabase
@@ -199,6 +199,10 @@ const updateMembresia = async (req, res) => {
     }
 
     const updateData = {};
+
+    if (id_plan_membresia) {
+      updateData.id_plan_membresia = id_plan_membresia;
+    }
 
     // 2. Manejo de Fechas (Manual o por días)
     if (fecha_inicio) {
@@ -245,9 +249,66 @@ const updateMembresia = async (req, res) => {
   }
 };
 
+/**
+ * 5. ELIMINAR / CANCELAR MEMBRESÍA
+ * DELETE /api/membresias/:id
+ */
+const deleteMembresia = async (req, res) => {
+  try {
+    const idGimnasio = req.usuario?.id_gimnasio;
+    const { id } = req.params;
+
+    if (!idGimnasio) {
+      return res.status(400).json({ error: 'No se identificó el gimnasio autenticado.' });
+    }
+
+    // Verificar que la membresía exista y pertenezca al gimnasio
+    const { data: membActual, error: membErr } = await supabase
+      .from('membresia')
+      .select(`
+        id_membresia,
+        socio!inner (id_gimnasio)
+      `)
+      .eq('id_membresia', id)
+      .eq('socio.id_gimnasio', idGimnasio)
+      .maybeSingle();
+
+    if (membErr || !membActual) {
+      return res.status(404).json({ error: 'Membresía no encontrada o no pertenece a tu gimnasio.' });
+    }
+
+    // Intentar eliminar directamente
+    const { error: delErr } = await supabase
+      .from('membresia')
+      .delete()
+      .eq('id_membresia', id);
+
+    if (delErr) {
+      // Si falla por clave foránea (por ejemplo pagos existentes asociados a esta membresía)
+      if (delErr.code === '23503' || delErr.message?.includes('foreign key') || delErr.message?.includes('violates foreign key constraint')) {
+        await supabase
+          .from('membresia')
+          .update({ estado: 'cancelada' })
+          .eq('id_membresia', id);
+
+        return res.status(200).json({
+          mensaje: 'La membresía tiene pagos u operaciones registradas en el historial contable. Se ha marcado como cancelada.',
+          cancelada: true
+        });
+      }
+      return res.status(500).json({ error: 'Error al eliminar la membresía: ' + delErr.message });
+    }
+
+    return res.status(200).json({ mensaje: 'Membresía eliminada exitosamente.' });
+  } catch (error) {
+    return res.status(500).json({ error: 'Error interno del servidor: ' + error.message });
+  }
+};
+
 module.exports = {
   getMembresias,
   getMembresiaById,
   createMembresia,
-  updateMembresia
+  updateMembresia,
+  deleteMembresia
 };

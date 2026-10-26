@@ -6,8 +6,22 @@ const supabase = require('../config/supabase');
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
+ * =========================================================================================
+ * CONTROLADOR: registerOwner
+ * RUTA: POST /api/auth/register
+ * DESCRIPCIÓN: Registra un nuevo dueño en la base de datos Supabase y opcionalmente su gimnasio.
+ * =========================================================================================
+ * 
+ * GUÍA PASO A PASO:
+ * 1. Valida campos obligatorios y formato de email.
+ * 2. Comprueba unicidad del email contra la tabla 'usuario'.
+ * 3. Encripta la contraseña usando bcrypt (saltRounds = 10).
+ * 4. Inserta el registro con rol 'dueño' y estado 'activo'.
+ * 5. Si se aportaron datos de gimnasio, lo crea y lo asocia mediante 'id_usuario'.
+ * 6. Emite un token JWT con vigencia de 24h para autologueo inmediato.
  */
 const registerOwner = async (req, res) => {
+
   try {
     const { 
       nombreGimnasio, 
@@ -227,7 +241,26 @@ const login = async (req, res) => {
 };
 
 /**
- * Valida email, DNI y contraseña directamente en la tabla socio.
+ * ==============================================================================
+ * CONTROLADOR: loginSocio
+ * RUTA: POST /api/auth/login-socio
+ * ==============================================================================
+ * 
+ * GUÍA DE ARQUITECTURA DE AUTENTICACIÓN DEL SOCIO:
+ * 1. Factor de Doble Identificación:
+ *    - A diferencia del dueño, el alumno se identifica mediante Email + DNI para evitar
+ *      homónimos o registros duplicados entre gimnasios.
+ * 2. Validación de Estado y Habilitación:
+ *    - El socio debe figurar con `estado === 'activo'` para ingresar. Si fue suspendido o dado
+ *      de baja por la administración, el acceso se rechaza con HTTP 403.
+ * 3. Criptografía y Seguridad:
+ *    - Compara la contraseña provista contra el hash almacenado en Supabase utilizando `bcrypt.compare`.
+ * 4. Metadatos Institucionales:
+ *    - Obtiene la información del gimnasio al que pertenece el alumno (`gimnasio`) para
+ *      personalizar el branding y contexto en el frontend.
+ * 5. Generación del Token JWT:
+ *    - Firma el token con payload: `{ id_socio, id_gimnasio, dni, email, rol: 'socio' }`.
+ *    - Este token es verificado por `verifyToken` en todas las rutas protegidas de `/api/socio/...`.
  */
 const loginSocio = async (req, res) => {
   try {
@@ -404,11 +437,28 @@ const getMe = async (req, res) => {
 
     const { data: gimnasio } = await supabase
       .from('gimnasio')
-      .select('id_gimnasio, nombre, direccion, telefono, estado')
+      .select('id_gimnasio, nombre, direccion, telefono, email, fecha_registro, estado, id_usuario')
       .eq('id_usuario', usuario.id_usuario)
       .maybeSingle();
 
+    let estadisticas = null;
+    if (gimnasio?.id_gimnasio) {
+      const { data: sociosGym } = await supabase
+        .from('socio')
+        .select('id_socio, estado')
+        .eq('id_gimnasio', gimnasio.id_gimnasio);
+
+      const totalSocios = sociosGym?.length || 0;
+      const sociosActivos = sociosGym?.filter(s => (s.estado || '').toLowerCase() === 'activo').length || 0;
+
+      estadisticas = {
+        totalSocios,
+        sociosActivos
+      };
+    }
+
     usuario.gimnasio = gimnasio || null;
+    usuario.estadisticas = estadisticas;
 
     return res.status(200).json({
       usuario
@@ -418,9 +468,137 @@ const getMe = async (req, res) => {
   }
 };
 
+/**
+ * CONTROLADOR: updateOwnerProfile
+ * RUTA: PUT /api/auth/me o PUT /api/auth/perfil
+ * DESCRIPCIÓN: Permite al dueño actualizar sus datos personales (nombre, apellido, email) y cambiar su contraseña.
+ */
+const updateOwnerProfile = async (req, res) => {
+  try {
+    const idUsuario = req.usuario?.id_usuario;
+
+    if (!idUsuario) {
+      return res.status(401).json({ error: 'Usuario no autenticado o no autorizado como administrador.' });
+    }
+
+    const { nombre, apellido, email, contrasena_actual, nueva_contrasena } = req.body;
+
+    // Buscar usuario actual
+    const { data: usuarioActual, error: errFetch } = await supabase
+      .from('usuario')
+      .select('*')
+      .eq('id_usuario', idUsuario)
+      .maybeSingle();
+
+    if (errFetch || !usuarioActual) {
+      return res.status(404).json({ error: 'Usuario no encontrado.' });
+    }
+
+    const updateFields = {};
+
+    if (nombre !== undefined) {
+      if (!nombre.trim()) {
+        return res.status(400).json({ error: 'El nombre es obligatorio.' });
+      }
+      updateFields.nombre = nombre.trim();
+    }
+
+    if (apellido !== undefined) {
+      updateFields.apellido = apellido.trim();
+    }
+
+    if (email !== undefined) {
+      const cleanEmail = email.trim().toLowerCase();
+      if (!EMAIL_REGEX.test(cleanEmail)) {
+        return res.status(400).json({ error: 'El formato del email no es válido.' });
+      }
+
+      if (cleanEmail !== usuarioActual.email.toLowerCase()) {
+        const { data: existingUser } = await supabase
+          .from('usuario')
+          .select('id_usuario')
+          .ilike('email', cleanEmail)
+          .neq('id_usuario', idUsuario)
+          .maybeSingle();
+
+        if (existingUser) {
+          return res.status(400).json({ error: 'El email ingresado ya está en uso por otra cuenta.' });
+        }
+        updateFields.email = cleanEmail;
+      }
+    }
+
+    // Cambio de contraseña si se proporcionó nueva contraseña
+    if (nueva_contrasena && nueva_contrasena.trim()) {
+      const passLimpia = nueva_contrasena.trim();
+      if (passLimpia.length < 6) {
+        return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres.' });
+      }
+
+      if (!contrasena_actual) {
+        return res.status(400).json({ error: 'Debes ingresar tu contraseña actual para confirmar el cambio.' });
+      }
+
+      const match = await bcrypt.compare(contrasena_actual, usuarioActual.contrasena);
+      if (!match) {
+        return res.status(400).json({ error: 'La contraseña actual ingresada es incorrecta.' });
+      }
+
+      updateFields.contrasena = await bcrypt.hash(passLimpia, 10);
+    }
+
+    if (Object.keys(updateFields).length === 0) {
+      return res.status(400).json({ error: 'No se enviaron datos para actualizar.' });
+    }
+
+    const { data: updatedUser, error: errUpdate } = await supabase
+      .from('usuario')
+      .update(updateFields)
+      .eq('id_usuario', idUsuario)
+      .select('id_usuario, nombre, apellido, email, rol, estado, fecha_creacion')
+      .single();
+
+    if (errUpdate) {
+      return res.status(500).json({ error: 'Error al actualizar el usuario: ' + errUpdate.message });
+    }
+
+    // Obtener gimnasio asociado
+    const { data: gym } = await supabase
+      .from('gimnasio')
+      .select('*')
+      .eq('id_usuario', idUsuario)
+      .maybeSingle();
+
+    updatedUser.gimnasio = gym || null;
+
+    // Generar nuevo token si cambió el email
+    const jwtSecret = process.env.JWT_SECRET || 'gymtrack_jwt_secret_key_2026';
+    const expiresIn = process.env.JWT_EXPIRES_IN || '24h';
+    const token = jwt.sign(
+      {
+        id_usuario: updatedUser.id_usuario,
+        id_gimnasio: gym ? gym.id_gimnasio : req.usuario.id_gimnasio,
+        email: updatedUser.email,
+        rol: updatedUser.rol
+      },
+      jwtSecret,
+      { expiresIn }
+    );
+
+    return res.status(200).json({
+      mensaje: 'Perfil actualizado exitosamente.',
+      usuario: updatedUser,
+      token
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Error interno del servidor: ' + error.message });
+  }
+};
+
 module.exports = {
   registerOwner,
   login,
   loginSocio,
-  getMe
+  getMe,
+  updateOwnerProfile
 };

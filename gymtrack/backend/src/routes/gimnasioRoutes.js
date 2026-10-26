@@ -7,6 +7,6 @@ const { verifyToken } = require('../middlewares/authMiddleware');
 router.post('/', verifyToken, crearGimnasio);
 router.get('/mi-gimnasio', verifyToken, obtenerMiGimnasio);
 router.put('/mi-gimnasio', verifyToken, actualizarMiGimnasio);
+router.put('/:id', verifyToken, actualizarMiGimnasio);
 
 module.exports = router;
-

@@ -210,6 +210,220 @@ class _PerfilGimnasioScreenState extends State<PerfilGimnasioScreen> {
     );
   }
 
+  void _showEditarPerfilDuenoDialog() {
+    final currentUser = AuthService().currentUser ?? widget.user;
+    final nombreCtrl = TextEditingController(text: currentUser?.nombre ?? '');
+    final apellidoCtrl = TextEditingController(text: currentUser?.apellido ?? '');
+    final emailCtrl = TextEditingController(text: currentUser?.email ?? '');
+    final actualPassCtrl = TextEditingController();
+    final nuevaPassCtrl = TextEditingController();
+    bool isSaving = false;
+    bool obscureCurrent = true;
+    bool obscureNew = true;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF161D21),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 24,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  const Row(
+                    children: [
+                      Icon(Icons.manage_accounts_rounded, color: Color(0xFF00E676), size: 26),
+                      SizedBox(width: 10),
+                      Text(
+                        'Perfil del Administrador',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+
+                  const Text('NOMBRE', style: TextStyle(color: Color(0xFF00E676), fontSize: 11, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: nombreCtrl,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: const Color(0xFF1F292E),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF00E676), size: 20),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  const Text('APELLIDO', style: TextStyle(color: Color(0xFF00E676), fontSize: 11, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: apellidoCtrl,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: const Color(0xFF1F292E),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF00E676), size: 20),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  const Text('CORREO ELECTRÓNICO', style: TextStyle(color: Color(0xFF00E676), fontSize: 11, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: emailCtrl,
+                    keyboardType: TextInputType.emailAddress,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: const Color(0xFF1F292E),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF00E676), size: 20),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  const Text('CAMBIAR CONTRASEÑA (OPCIONAL)', style: TextStyle(color: Color(0xFFFFB300), fontSize: 11, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: actualPassCtrl,
+                    obscureText: obscureCurrent,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'Contraseña actual',
+                      hintStyle: const TextStyle(color: Colors.white30, fontSize: 13),
+                      filled: true,
+                      fillColor: const Color(0xFF1F292E),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFFFFB300), size: 20),
+                      suffixIcon: IconButton(
+                        icon: Icon(obscureCurrent ? Icons.visibility_off : Icons.visibility, color: Colors.white54, size: 18),
+                        onPressed: () => setModalState(() => obscureCurrent = !obscureCurrent),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: nuevaPassCtrl,
+                    obscureText: obscureNew,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'Nueva contraseña (mínimo 6 caracteres)',
+                      hintStyle: const TextStyle(color: Colors.white30, fontSize: 13),
+                      filled: true,
+                      fillColor: const Color(0xFF1F292E),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      prefixIcon: const Icon(Icons.lock_reset_rounded, color: Color(0xFFFFB300), size: 20),
+                      suffixIcon: IconButton(
+                        icon: Icon(obscureNew ? Icons.visibility_off : Icons.visibility, color: Colors.white54, size: 18),
+                        onPressed: () => setModalState(() => obscureNew = !obscureNew),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00E676),
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: isSaving
+                          ? null
+                          : () async {
+                              final nombre = nombreCtrl.text.trim();
+                              final apellido = apellidoCtrl.text.trim();
+                              final email = emailCtrl.text.trim();
+
+                              if (nombre.isEmpty || apellido.isEmpty || email.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Por favor completa nombre, apellido y email.')),
+                                );
+                                return;
+                              }
+
+                              if (nuevaPassCtrl.text.isNotEmpty && actualPassCtrl.text.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Debes ingresar tu contraseña actual para cambiarla.')),
+                                );
+                                return;
+                              }
+
+                              setModalState(() => isSaving = true);
+
+                              final res = await AuthService().updateOwnerProfile(
+                                nombre: nombre,
+                                apellido: apellido,
+                                email: email,
+                                contrasenaActual: actualPassCtrl.text.isNotEmpty ? actualPassCtrl.text : null,
+                                nuevaContrasena: nuevaPassCtrl.text.isNotEmpty ? nuevaPassCtrl.text : null,
+                              );
+
+                              if (!context.mounted) return;
+                              setModalState(() => isSaving = false);
+                              Navigator.pop(context);
+
+                              if (res.success) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(res.message),
+                                    backgroundColor: const Color(0xFF1B5E20),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                                setState(() {});
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(res.message),
+                                    backgroundColor: const Color(0xFFB71C1C),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
+                            },
+                      child: isSaving
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                          : const Text('GUARDAR PERFIL', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.6)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final gym = _gym;
@@ -343,6 +557,62 @@ class _PerfilGimnasioScreenState extends State<PerfilGimnasioScreen> {
                         _buildRow(Icons.access_time_rounded, 'Horarios de atención', 'Lunes a Viernes: 07:00 a 22:00 hs\nSábados: 09:00 a 18:00 hs'),
                       ],
                     ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Perfil del Administrador / Dueño
+                  Builder(
+                    builder: (context) {
+                      final u = AuthService().currentUser ?? widget.user;
+                      return Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF161E22),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFF243037)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Mi Cuenta y Seguridad',
+                                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.edit_outlined, color: Color(0xFF00E676), size: 20),
+                                  tooltip: 'Editar Perfil',
+                                  onPressed: _showEditarPerfilDuenoDialog,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            _buildRow(Icons.person_outline, 'Nombre completo', '${u?.nombre ?? ""} ${u?.apellido ?? ""}'.trim().isNotEmpty ? '${u?.nombre ?? ""} ${u?.apellido ?? ""}'.trim() : 'Administrador'),
+                            const Divider(color: Color(0xFF243037), height: 22),
+                            _buildRow(Icons.email_outlined, 'Correo personal', u?.email ?? 'No disponible'),
+                            const Divider(color: Color(0xFF243037), height: 22),
+                            _buildRow(Icons.security_rounded, 'Rol de acceso', 'Dueño / Administrador Central'),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                icon: const Icon(Icons.lock_reset_rounded, size: 18, color: Color(0xFF00E676)),
+                                label: const Text('Modificar Datos y Contraseña', style: TextStyle(color: Color(0xFF00E676), fontWeight: FontWeight.bold)),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: Color(0xFF00E676)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(vertical: 11),
+                                ),
+                                onPressed: _showEditarPerfilDuenoDialog,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 20),

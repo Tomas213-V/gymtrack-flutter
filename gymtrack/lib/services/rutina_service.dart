@@ -234,4 +234,141 @@ class RutinaService {
       return false;
     }
   }
+
+  /// Obtiene los programas oficiales del gimnasio ofrecidos a todos los socios
+  Future<List<RutinaModel>> fetchRutinasOfrecidasGym() async {
+    final token = AuthService().token;
+    try {
+      final uri = Uri.parse(ApiConfig.rutinasOfrecidasGymUrl);
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final rawList = data is List ? data : (data is Map && data['rutinas'] != null ? data['rutinas'] as List : []);
+        return rawList
+            .map((e) => RutinaModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (_) {}
+
+    return [];
+  }
+
+  /// Adopta/clona un programa oficial del gimnasio a las rutinas personales del socio
+  Future<Map<String, dynamic>> adoptarRutinaGym({
+    int? idPlantilla,
+    int? idSocio,
+    String? nombrePersonalizado,
+    Map<String, dynamic>? plantilla,
+  }) async {
+    final token = AuthService().token;
+    try {
+      final uri = Uri.parse(ApiConfig.rutinasAdoptarUrl);
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final body = <String, dynamic>{};
+      if (idPlantilla != null) body['id_plantilla'] = idPlantilla;
+      if (idSocio != null) body['id_socio'] = idSocio;
+      if (nombrePersonalizado != null) body['nombre_personalizado'] = nombrePersonalizado;
+      if (plantilla != null) body['plantilla'] = plantilla;
+
+      final response = await http
+          .post(
+            uri,
+            headers: headers,
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {
+          'success': true,
+          'message': data['message'] ?? data['mensaje'] ?? '¡Rutina adoptada con éxito!',
+          'rutina': data['rutina'] != null ? RutinaModel.fromJson(data['rutina']) : null,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['error'] ?? data['detail'] ?? 'No se pudo adoptar la rutina.',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error de conexión: $e',
+      };
+    }
+  }
+
+  /// Establece una rutina como la rutina activa principal del socio
+  Future<bool> activarRutina(int idRutina) async {
+    final token = AuthService().token;
+    try {
+      final uri = Uri.parse('${ApiConfig.rutinasUrl}/$idRutina/activar');
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.put(uri, headers: headers).timeout(const Duration(seconds: 8));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Actualiza series, repeticiones, peso o descanso de un ejercicio en una rutina
+  Future<bool> updateEjercicioEnRutina({
+    required int idRutina,
+    required int idEjercicio,
+    required int series,
+    required int repeticiones,
+    double? peso,
+    int? descanso,
+  }) async {
+    final token = AuthService().token;
+    try {
+      final uri = Uri.parse('${ApiConfig.rutinasUrl}/$idRutina/ejercicios/$idEjercicio');
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final body = <String, dynamic>{
+        'series': series,
+        'repeticiones': repeticiones,
+      };
+      if (peso != null) body['peso'] = peso;
+      if (descanso != null) body['descanso'] = descanso;
+
+      final response = await http
+          .put(
+            uri,
+            headers: headers,
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 8));
+
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
 }

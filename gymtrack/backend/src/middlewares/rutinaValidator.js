@@ -20,8 +20,13 @@ exports.validateEjercicioAsociacion = (req, res, next) => {
     return res.status(400).json({ error: 'Las series deben ser un número entero mayor a 0.' });
   }
 
-  if (repeticiones !== undefined && (isNaN(Number(repeticiones)) || Number(repeticiones) <= 0)) {
-    return res.status(400).json({ error: 'Las repeticiones deben ser un número entero mayor a 0.' });
+  if (repeticiones !== undefined) {
+    const parsedReps = parseInt(repeticiones, 10);
+    if (isNaN(parsedReps) || parsedReps <= 0) {
+      return res.status(400).json({ error: 'Las repeticiones deben ser un número entero mayor a 0.' });
+    }
+    // Normalizar a número entero para la base de datos
+    req.body.repeticiones = parsedReps;
   }
 
   next();

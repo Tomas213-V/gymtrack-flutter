@@ -8,14 +8,16 @@ const {
   createSocio, 
   updateSocio, 
   changeEstadoSocio,
-  deleteSocio
+  deleteSocio,
+  verificarDniSocio
 } = require('../controllers/socioController');
 const { verifyToken } = require('../middlewares/authMiddleware');
 
 // Proteger todas las rutas exigiendo JWT
 router.use(verifyToken);
 
-// Rutas de Perfil (declaradas antes de /:id para evitar capturas accidentales)
+// Rutas especiales y de Perfil (declaradas antes de /:id para evitar capturas accidentales)
+router.get('/verificar-dni', verificarDniSocio);
 router.get('/perfil', getPerfilSocio);
 router.put('/perfil', updatePerfilSocio);
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/socio_model.dart';
 import '../services/socio_service.dart';
@@ -79,6 +80,9 @@ class _SociosScreenState extends State<SociosScreen> {
     String selectedEstado = 'activo';
     final formKey = GlobalKey<FormState>();
     bool isSaving = false;
+    bool isVerifyingDni = false;
+    Map<String, dynamic>? dniCheckResult;
+    Timer? dniDebounce;
 
     showModalBottomSheet(
       context: context,
@@ -90,6 +94,27 @@ class _SociosScreenState extends State<SociosScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            void checkDni(String value) {
+              dniDebounce?.cancel();
+              final trimmed = value.trim();
+              if (trimmed.length < 6) {
+                setModalState(() {
+                  dniCheckResult = null;
+                  isVerifyingDni = false;
+                });
+                return;
+              }
+
+              setModalState(() => isVerifyingDni = true);
+              dniDebounce = Timer(const Duration(milliseconds: 500), () async {
+                final res = await _socioService.verificarDni(trimmed);
+                setModalState(() {
+                  isVerifyingDni = false;
+                  dniCheckResult = res;
+                });
+              });
+            }
+
             return Padding(
               padding: EdgeInsets.only(
                 left: 20,
@@ -117,7 +142,10 @@ class _SociosScreenState extends State<SociosScreen> {
                           ),
                           IconButton(
                             icon: const Icon(Icons.close, color: Colors.white70),
-                            onPressed: () => Navigator.pop(context),
+                            onPressed: () {
+                              dniDebounce?.cancel();
+                              Navigator.pop(context);
+                            },
                           ),
                         ],
                       ),
@@ -140,9 +168,91 @@ class _SociosScreenState extends State<SociosScreen> {
                         controller: dniCtrl,
                         style: const TextStyle(color: Colors.white),
                         keyboardType: TextInputType.number,
-                        decoration: _inputDecoration('DNI *', Icons.badge_outlined),
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Requerido' : null,
+                        decoration: _inputDecoration(
+                          'DNI *',
+                          Icons.badge_outlined,
+                        ).copyWith(
+                          suffixIcon: isVerifyingDni
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00E676)),
+                                  ),
+                                )
+                              : null,
+                        ),
+                        onChanged: (val) => checkDni(val),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return 'Requerido';
+                          if (dniCheckResult != null && dniCheckResult!['existeEnEsteGimnasio'] == true) {
+                            return 'Ya registrado en tu gimnasio';
+                          }
+                          return null;
+                        },
                       ),
+                      if (dniCheckResult != null) ...[
+                        const SizedBox(height: 8),
+                        if (dniCheckResult!['existeEnEsteGimnasio'] == true)
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFEF4444)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 18),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'DNI ya registrado en tu gimnasio: ${dniCheckResult!['socio']?['nombre'] ?? ''} ${dniCheckResult!['socio']?['apellido'] ?? ''}',
+                                    style: const TextStyle(color: Color(0xFFEF4444), fontSize: 12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else if (dniCheckResult!['vinculadoOtroGimnasio'] == true)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFF59E0B)),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.warning_amber_rounded, color: Color(0xFFF59E0B), size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'AVISO: ALUMNO EN OTRO GIMNASIO',
+                                        style: TextStyle(
+                                          color: Color(0xFFF59E0B),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 11,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        'Este alumno (${dniCheckResult!['socio']?['nombre'] ?? ''}) está registrado y ACTIVO en "${dniCheckResult!['gimnasio']?['nombre'] ?? 'otro gimnasio'}". Debe regularizar su membresía allí para evitar duplicidad.',
+                                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: telCtrl,
@@ -188,7 +298,7 @@ class _SociosScreenState extends State<SociosScreen> {
                                   if (!formKey.currentState!.validate()) return;
                                   setModalState(() => isSaving = true);
 
-                                  final ok = await _socioService.createSocio(
+                                  final res = await _socioService.createSocio(
                                     nombre: nombreCtrl.text.trim(),
                                     apellido: apellidoCtrl.text.trim(),
                                     dni: dniCtrl.text.trim(),
@@ -198,18 +308,30 @@ class _SociosScreenState extends State<SociosScreen> {
                                     fechaVencimiento: '25 May 2026',
                                   );
 
+                                  dniDebounce?.cancel();
+
                                   if (context.mounted) {
-                                    Navigator.pop(context);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(ok
-                                            ? 'Socio registrado con éxito'
-                                            : 'Socio guardado localmente'),
-                                        backgroundColor: const Color(0xFF1B5E20),
-                                        behavior: SnackBarBehavior.floating,
-                                      ),
-                                    );
-                                    _loadData();
+                                    setModalState(() => isSaving = false);
+                                    if (res.success) {
+                                      Navigator.pop(context);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(res.message),
+                                          backgroundColor: const Color(0xFF1B5E20),
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      );
+                                      _loadData();
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(res.message),
+                                          backgroundColor: const Color(0xFFB71C1C),
+                                          behavior: SnackBarBehavior.floating,
+                                          duration: const Duration(seconds: 4),
+                                        ),
+                                      );
+                                    }
                                   }
                                 },
                           style: ElevatedButton.styleFrom(

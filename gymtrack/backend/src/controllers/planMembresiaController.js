@@ -208,10 +208,66 @@ const deshabilitarPlanMembresia = async (req, res) => {
   }
 };
 
+/**
+ * 6. ELIMINAR PLAN DE MEMBRESÍA
+ * DELETE /api/planes-membresia/:id
+ */
+const deletePlanMembresia = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const idGimnasio = req.usuario?.id_gimnasio;
+
+    if (!idGimnasio) {
+      return res.status(400).json({ error: 'No se identificó el gimnasio autenticado.' });
+    }
+
+    // Verificar si el plan pertenece al gimnasio
+    const { data: plan, error: planErr } = await supabase
+      .from('plan_membresia')
+      .select('id_plan_membresia')
+      .eq('id_plan_membresia', id)
+      .eq('id_gimnasio', idGimnasio)
+      .maybeSingle();
+
+    if (planErr || !plan) {
+      return res.status(404).json({ error: 'Plan de membresía no encontrado o no pertenece a tu gimnasio.' });
+    }
+
+    // Intentar eliminar
+    const { error: delErr } = await supabase
+      .from('plan_membresia')
+      .delete()
+      .eq('id_plan_membresia', id)
+      .eq('id_gimnasio', idGimnasio);
+
+    if (delErr) {
+      // Si está en uso por foreign key
+      if (delErr.code === '23503' || delErr.message?.includes('foreign key') || delErr.message?.includes('violates foreign key constraint')) {
+        await supabase
+          .from('plan_membresia')
+          .update({ estado: 'inactivo' })
+          .eq('id_plan_membresia', id)
+          .eq('id_gimnasio', idGimnasio);
+
+        return res.status(200).json({
+          mensaje: 'El plan tiene membresías asociadas a socios. Se ha marcado como inactivo para preservar el historial.',
+          inactivo: true
+        });
+      }
+      return res.status(500).json({ error: 'Error al eliminar el plan: ' + delErr.message });
+    }
+
+    return res.status(200).json({ mensaje: 'Plan de membresía eliminado exitosamente.' });
+  } catch (error) {
+    return res.status(500).json({ error: 'Error interno del servidor: ' + error.message });
+  }
+};
+
 module.exports = {
   getPlanesMembresia,
   getPlanMembresiaById,
   createPlanMembresia,
   updatePlanMembresia,
-  deshabilitarPlanMembresia
+  deshabilitarPlanMembresia,
+  deletePlanMembresia
 };

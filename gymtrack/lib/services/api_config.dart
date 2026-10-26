@@ -33,6 +33,7 @@ class ApiConfig {
   static String get loginSocioUrl => '$baseUrl/api/auth/login-socio';
   static String get registerUrl => '$baseUrl/api/auth/register';
   static String get meUrl => '$baseUrl/api/auth/me';
+  static String get perfilDuenoUrl => '$baseUrl/api/auth/perfil';
   static String get healthUrl => '$baseUrl/api/health';
 
   // Endpoints de gimnasios
@@ -43,11 +44,13 @@ class ApiConfig {
   static String get sociosUrl => '$baseUrl/api/socios';
   static String get sociosStatsUrl => '$baseUrl/api/socios/estadisticas';
   static String get perfilSocioUrl => '$baseUrl/api/socios/perfil';
+  static String get verificarDniUrl => '$baseUrl/api/socios/verificar-dni';
 
-  // Endpoints de pagos
+  // Endpoints de pagos y dashboard dueño
   static String get pagosUrl => '$baseUrl/api/pagos';
   static String get pagosResumenUrl => '$baseUrl/api/pagos/resumen';
   static String get pagosMembresiasUrl => '$baseUrl/api/pagos/membresias';
+  static String get dashboardAdminUrl => '$baseUrl/api/dashboard/admin';
 
   // Endpoints de asistencias
   static String get asistenciasUrl => '$baseUrl/api/asistencias';
@@ -55,9 +58,27 @@ class ApiConfig {
 
   // Endpoints de rutinas y ejercicios
   static String get rutinasUrl => '$baseUrl/api/rutinas';
+  static String get rutinasOfrecidasGymUrl => '$baseUrl/api/rutinas/gym/ofrecidas';
+  static String get rutinasAdoptarUrl => '$baseUrl/api/rutinas/adoptar';
   static String get ejerciciosUrl => '$baseUrl/api/ejercicios';
+  static String get ejerciciosDisponiblesUrl => '$baseUrl/api/ejercicios/disponibles';
+  static String get socioEjerciciosUrl => '$baseUrl/api/socio/ejercicios';
 
   // Endpoints de planes de membresía
   static String get planesMembresiaUrl => '$baseUrl/api/planes-membresia';
+
+  // Endpoints de Asistencia y QR del Gimnasio
+  static String get asistenciasQrGimnasioUrl => '$baseUrl/api/asistencias/qr-gimnasio';
+
+  // Endpoints del Portal del Socio
+  static String get socioDashboardUrl => '$baseUrl/api/socio/dashboard';
+  static String get socioCheckinUrl => '$baseUrl/api/socio/checkin';
+  static String get socioProgresoUrl => '$baseUrl/api/socio/progreso';
+  static String get socioMembresiaUrl => '$baseUrl/api/socio/membresia';
+  static String get socioPlanesDisponiblesUrl => '$baseUrl/api/socio/planes-disponibles';
+  static String get socioActualizarMembresiaUrl => '$baseUrl/api/socio/membresia/actualizar';
+  static String get socioIniciarPagoUrl => '$baseUrl/api/socio/pagos/iniciar';
+  static String get socioConfirmarPagoUrl => '$baseUrl/api/socio/pagos/confirmar';
 }
+
 

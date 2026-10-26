@@ -4,7 +4,8 @@ const {
   getMembresias,
   getMembresiaById,
   createMembresia,
-  updateMembresia
+  updateMembresia,
+  deleteMembresia
 } = require('../controllers/membresiaController');
 const { verifyToken } = require('../middlewares/authMiddleware');
 
@@ -15,5 +16,6 @@ router.get('/', getMembresias);
 router.get('/:id', getMembresiaById);
 router.post('/', createMembresia);
 router.patch('/:id', updateMembresia);
+router.delete('/:id', deleteMembresia);
 
 module.exports = router;

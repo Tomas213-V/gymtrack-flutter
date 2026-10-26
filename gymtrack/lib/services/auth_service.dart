@@ -391,4 +391,72 @@ class AuthService {
       return null;
     }
   }
+
+  /// Actualiza los datos del perfil y contraseña del dueño/administrador
+  Future<AuthResponse> updateOwnerProfile({
+    required String nombre,
+    required String apellido,
+    required String email,
+    String? contrasenaActual,
+    String? nuevaContrasena,
+  }) async {
+    try {
+      final url = Uri.parse(ApiConfig.perfilDuenoUrl);
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+      if (_token != null) {
+        headers['Authorization'] = 'Bearer $_token';
+      }
+
+      final body = <String, dynamic>{
+        'nombre': nombre.trim(),
+        'apellido': apellido.trim(),
+        'email': email.trim(),
+      };
+      if (contrasenaActual != null && contrasenaActual.isNotEmpty) {
+        body['contrasena_actual'] = contrasenaActual;
+      }
+      if (nuevaContrasena != null && nuevaContrasena.isNotEmpty) {
+        body['nueva_contrasena'] = nuevaContrasena;
+      }
+
+      final response = await http
+          .put(
+            url,
+            headers: headers,
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        if (data['token'] != null) {
+          _token = data['token'] as String;
+        }
+        if (data['usuario'] != null) {
+          _currentUser = UserModel.fromJson(data['usuario']);
+        }
+        return AuthResponse(
+          success: true,
+          message: data['mensaje'] ?? 'Perfil actualizado correctamente.',
+          token: _token,
+          user: _currentUser,
+        );
+      } else {
+        return AuthResponse(
+          success: false,
+          message: data['error'] ?? 'No se pudo actualizar el perfil.',
+          error: data['error'],
+        );
+      }
+    } catch (e) {
+      return AuthResponse(
+        success: false,
+        message: 'Error al actualizar el perfil: $e',
+        error: e.toString(),
+      );
+    }
+  }
 }

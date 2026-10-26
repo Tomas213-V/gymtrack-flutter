@@ -4,6 +4,11 @@ const router = express.Router();
 const rutinaController = require('../controllers/rutinaController');
 const { validateRutina, validateEjercicioAsociacion } = require('../middlewares/rutinaValidator');
 
+// Endpoints especiales de Rutinas
+router.get('/gym/ofrecidas', rutinaController.getRutinasOfrecidasGym);
+router.post('/adoptar', rutinaController.adoptarRutinaGym);
+router.put('/:id/activar', rutinaController.activarRutina);
+
 // Endpoints de Rutinas
 router.get('/', rutinaController.getAllRutinas);
 router.get('/:id', rutinaController.getRutinaById);

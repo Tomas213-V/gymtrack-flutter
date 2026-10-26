@@ -98,32 +98,57 @@ const obtenerMiGimnasio = async (req, res) => {
 const actualizarMiGimnasio = async (req, res) => {
   try {
     const id_usuario = req.usuario?.id_usuario;
-    const { nombre, direccion, telefono, email } = req.body;
+    const id_gimnasio = req.usuario?.id_gimnasio;
 
-    if (!id_usuario) {
+    if (!id_usuario && !id_gimnasio) {
       return res.status(401).json({ error: 'No se pudo identificar al usuario autenticado.' });
     }
 
-    const updateData = {};
-    if (nombre && nombre.trim()) updateData.nombre = nombre.trim();
-    if (direccion !== undefined) updateData.direccion = direccion ? direccion.trim() : null;
-    if (telefono !== undefined) updateData.telefono = telefono ? telefono.trim() : null;
-    if (email !== undefined) updateData.email = email ? email.trim().toLowerCase() : null;
+    // Buscar el gimnasio actual
+    let query = supabase.from('gimnasio').select('*');
+    if (id_usuario) {
+      query = query.eq('id_usuario', id_usuario);
+    } else {
+      query = query.eq('id_gimnasio', id_gimnasio);
+    }
 
-    const { data: gimnasio, error } = await supabase
+    const { data: gymExistente, error: errFetch } = await query.maybeSingle();
+
+    if (errFetch || !gymExistente) {
+      return res.status(404).json({ error: 'Gimnasio no encontrado o no pertenece a tu cuenta.' });
+    }
+
+    const { nombre, direccion, telefono, email } = req.body;
+
+    const updateFields = {};
+    if (nombre !== undefined) {
+      if (!nombre.trim()) {
+        return res.status(400).json({ error: 'El nombre del gimnasio no puede estar vacío.' });
+      }
+      updateFields.nombre = nombre.trim();
+    }
+    if (direccion !== undefined) updateFields.direccion = direccion ? direccion.trim() : null;
+    if (telefono !== undefined) updateFields.telefono = telefono ? telefono.trim() : null;
+    if (email !== undefined) updateFields.email = email ? email.trim().toLowerCase() : null;
+
+    if (Object.keys(updateFields).length === 0) {
+      return res.status(400).json({ error: 'No se enviaron datos para actualizar.' });
+    }
+
+    const { data: gymActualizado, error: errUpdate } = await supabase
       .from('gimnasio')
-      .update(updateData)
-      .eq('id_usuario', id_usuario)
+      .update(updateFields)
+      .eq('id_gimnasio', gymExistente.id_gimnasio)
       .select()
-      .maybeSingle();
+      .single();
 
-    if (error) {
-      return res.status(500).json({ error: 'Error al actualizar el gimnasio: ' + error.message });
+    if (errUpdate) {
+      return res.status(500).json({ error: 'Error al actualizar el gimnasio: ' + errUpdate.message });
     }
 
     return res.status(200).json({
-      mensaje: 'Gimnasio actualizado correctamente.',
-      gimnasio
+      mensaje: 'Datos del gimnasio actualizados exitosamente.',
+      gimnasio: gymActualizado
     });
   } catch (error) {
     return res.status(500).json({ error: 'Error interno del servidor: ' + error.message });
@@ -135,4 +160,3 @@ module.exports = {
   obtenerMiGimnasio,
   actualizarMiGimnasio
 };
-

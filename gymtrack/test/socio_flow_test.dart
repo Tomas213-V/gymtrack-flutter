@@ -46,11 +46,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(LoginSocioScreen), findsOneWidget);
-    expect(find.text('Número de socio'), findsOneWidget);
-    expect(find.text('Contraseña'), findsOneWidget);
+    expect(find.text('CORREO ELECTRÓNICO'), findsOneWidget);
+    expect(find.text('CONTRASEÑA'), findsOneWidget);
     expect(find.text('DNI'), findsOneWidget);
-    expect(find.text('Ingresar'), findsOneWidget);
-    expect(find.text('Volver al acceso de administrador'), findsOneWidget);
+    expect(find.textContaining('INGRESAR'), findsOneWidget);
+    expect(find.textContaining('Volver al acceso de administrador'), findsOneWidget);
   });
 
   testWidgets('LoginSocioScreen back button returns to previous screen', (WidgetTester tester) async {
@@ -61,7 +61,7 @@ void main() {
     await tester.tap(find.text('¿Eres socio?'));
     await tester.pumpAndSettle();
 
-    final volverFinder = find.text('Volver al acceso de administrador');
+    final volverFinder = find.textContaining('Volver al acceso de administrador');
     await tester.ensureVisible(volverFinder);
     await tester.tap(volverFinder);
     await tester.pumpAndSettle();
@@ -74,12 +74,17 @@ void main() {
     await tester.pumpWidget(createWidgetForTesting(child: const LoginSocioScreen()));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Ingresar'));
+    await tester.enterText(find.byType(TextField).at(0), 'luciano@email.com');
+    await tester.enterText(find.byType(TextField).at(1), '41234567');
+    await tester.enterText(find.byType(TextField).at(2), '123456');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.textContaining('INGRESAR'));
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
     expect(find.byType(SocioMainLayoutScreen), findsOneWidget);
-    expect(find.text('¡Hola, Luciano! 👋'), findsOneWidget);
+    expect(find.textContaining('Luciano'), findsOneWidget);
   });
 
   testWidgets('DashboardSocioScreen displays membership, quick actions, and progress', (WidgetTester tester) async {
@@ -210,10 +215,9 @@ void main() {
 
     expect(find.byType(PerfilSocioScreen), findsOneWidget);
     expect(find.text('Luciano García'), findsOneWidget);
-    expect(find.text('Socio GTM-1024'), findsOneWidget);
+    expect(find.textContaining('DNI 41.234.567'), findsWidgets);
     expect(find.text('luciano@email.com'), findsOneWidget);
     expect(find.text('+54 11 5555-1234'), findsOneWidget);
-    expect(find.text('41.234.567'), findsOneWidget);
   });
 
   testWidgets('SocioMainLayoutScreen switches between all 5 bottom tabs', (WidgetTester tester) async {

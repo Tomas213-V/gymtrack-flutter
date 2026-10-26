@@ -5,7 +5,8 @@ const {
   getPlanMembresiaById,
   createPlanMembresia,
   updatePlanMembresia,
-  deshabilitarPlanMembresia
+  deshabilitarPlanMembresia,
+  deletePlanMembresia
 } = require('../controllers/planMembresiaController');
 const { verifyToken } = require('../middlewares/authMiddleware');
 
@@ -17,5 +18,6 @@ router.get('/:id', getPlanMembresiaById);
 router.post('/', createPlanMembresia);
 router.put('/:id', updatePlanMembresia);
 router.patch('/:id/desactivar', deshabilitarPlanMembresia);
+router.delete('/:id', deletePlanMembresia);
 
 module.exports = router;

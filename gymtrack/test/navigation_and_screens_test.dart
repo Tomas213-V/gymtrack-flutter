@@ -53,7 +53,7 @@ void main() {
 
     expect(find.text('Socios'), findsWidgets);
     expect(find.text('Nuevo socio'), findsOneWidget);
-    expect(find.text('Total socios'), findsOneWidget);
+    expect(find.text('Total'), findsOneWidget);
     expect(find.text('Activos'), findsWidgets);
     expect(find.text('Pendientes'), findsWidgets);
     expect(find.text('Inactivos'), findsWidgets);

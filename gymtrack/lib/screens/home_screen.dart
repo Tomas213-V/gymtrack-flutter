@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import '../models/dashboard_admin_model.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
+import '../services/dashboard_admin_service.dart';
 import 'dueno/videos/videos_dueno_screen.dart';
 import 'login_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   final UserModel user;
   final bool showAppBar;
   final Function(int)? onNavigateToTab;
@@ -15,6 +17,46 @@ class HomeScreen extends StatelessWidget {
     this.showAppBar = false,
     this.onNavigateToTab,
   });
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final DashboardAdminService _dashboardService = DashboardAdminService();
+  DashboardAdminModel _dashboard = DashboardAdminModel.defaultMock();
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarDashboard();
+  }
+
+  Future<void> _cargarDashboard() async {
+    setState(() => _isLoading = true);
+    final data = await _dashboardService.getDashboardAdmin(
+      idGimnasio: widget.user.gimnasio?.idGimnasio,
+    );
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+      _dashboard = data;
+    });
+  }
+
+  String _formatMoney(double amount) {
+    if (amount >= 1000000) {
+      return '${(amount / 1000000).toStringAsFixed(1)}M';
+    }
+    if (amount >= 1000) {
+      return amount.toStringAsFixed(0).replaceAllMapped(
+            RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+            (Match m) => '${m[1]}.',
+          );
+    }
+    return amount.toStringAsFixed(0);
+  }
 
   void _handleLogout(BuildContext context) {
     AuthService().logout();
@@ -41,7 +83,6 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
-
 
   void _showReportesModal(BuildContext context) {
     showModalBottomSheet(
@@ -78,9 +119,11 @@ class HomeScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Descarga o consulta el balance mensual de ingresos, socios inscritos y asistencias.',
-              style: TextStyle(color: Color(0xFF8A98A0), fontSize: 14),
+            Text(
+              'Recaudación mes actual: \$${_formatMoney(_dashboard.recaudacionMesActual)}\n'
+              'Total de socios: ${_dashboard.totalSocios} (${_dashboard.sociosActivos} activos)\n'
+              'Asistencias del mes: ${_dashboard.asistenciasMesActual}',
+              style: const TextStyle(color: Color(0xFFB0BEC5), fontSize: 14, height: 1.5),
             ),
             const SizedBox(height: 24),
             SizedBox(
@@ -93,8 +136,8 @@ class HomeScreen extends StatelessWidget {
                 ),
                 onPressed: () {
                   Navigator.pop(context);
-                  if (onNavigateToTab != null) {
-                    onNavigateToTab!(2); // Ir a Pagos/Resumen
+                  if (widget.onNavigateToTab != null) {
+                    widget.onNavigateToTab!(2); // Ir a Pagos/Resumen
                   }
                 },
                 child: const Text('Ver Balance en Pagos', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
@@ -108,17 +151,21 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = user.nombre.trim().isNotEmpty
-        ? user.nombre.trim().toUpperCase()
+    final displayName = widget.user.nombre.trim().isNotEmpty
+        ? widget.user.nombre.trim().toUpperCase()
         : 'MARTÍN';
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F1416),
-      appBar: showAppBar
+      appBar: widget.showAppBar
           ? AppBar(
               backgroundColor: const Color(0xFF161D21),
               title: const Text('Dashboard', style: TextStyle(color: Colors.white)),
               actions: [
+                IconButton(
+                  icon: const Icon(Icons.refresh_rounded, color: Color(0xFF00E676)),
+                  onPressed: _cargarDashboard,
+                ),
                 IconButton(
                   icon: const Icon(Icons.logout, color: Colors.redAccent),
                   onPressed: () => _handleLogout(context),
@@ -127,228 +174,305 @@ class HomeScreen extends StatelessWidget {
             )
           : null,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. Encabezado de Saludo + Selector de Fecha
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '¡HOLA $displayName! 👋',
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                            letterSpacing: -0.5,
+        child: RefreshIndicator(
+          color: const Color(0xFF00E676),
+          backgroundColor: const Color(0xFF161E22),
+          onRefresh: _cargarDashboard,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. Encabezado de Saludo + Selector de Fecha
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '¡HOLA $displayName! 👋',
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: -0.5,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 3),
-                        const Text(
-                          'Resumen general de tu gimnasio',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF8A98A0),
+                          const SizedBox(height: 3),
+                          Text(
+                            widget.user.gimnasio?.nombre ?? 'Resumen general de tu gimnasio',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF8A98A0),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
 
-                  // Chip desplegable de fecha "Hoy, 24 May"
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF161D21),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFF243037)),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.calendar_today_outlined, size: 13, color: Color(0xFFB0BEC5)),
-                        SizedBox(width: 6),
-                        Text(
-                          'Hoy, 24 May',
-                          style: TextStyle(
-                            color: Color(0xFFB0BEC5),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
+                    // Chip desplegable de estado en vivo
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF161D21),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFF243037)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF00E676),
+                              shape: BoxShape.circle,
+                            ),
                           ),
-                        ),
-                        SizedBox(width: 4),
-                        Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: Color(0xFFB0BEC5)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 18),
-
-              // 2. Grilla 2x2 de Tarjetas de Métricas (KPIs)
-              Row(
-                children: [
-                  // Tarjeta 1: Socios activos
-                  Expanded(
-                    child: _buildMetricCard(
-                      context: context,
-                      icon: Icons.people_alt_outlined,
-                      iconColor: const Color(0xFF00E676),
-                      iconBgColor: const Color(0xFF00E676).withValues(alpha: 0.12),
-                      title: 'Socios activos',
-                      value: '128',
-                      bottomText: '▲ 5 este mes',
-                      bottomTextColor: const Color(0xFF00E676),
-                      onInfoTap: () => _showInfoDialog(
-                        context,
-                        'Socios Activos',
-                        'Total de socios con membresía vigente al día de hoy.',
+                          const SizedBox(width: 6),
+                          const Text(
+                            'En vivo',
+                            style: TextStyle(
+                              color: Color(0xFFB0BEC5),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Tarjeta 2: Ingresos
-                  Expanded(
-                    child: _buildMetricCard(
-                      context: context,
-                      icon: Icons.attach_money_rounded,
-                      iconColor: const Color(0xFF00E676),
-                      iconBgColor: const Color(0xFF00E676).withValues(alpha: 0.12),
-                      title: 'Socios activos',
-                      value: '\$ 82.450',
-                      bottomText: '▲ 12% vs ayer',
-                      bottomTextColor: const Color(0xFF00E676),
-                      onInfoTap: () => _showInfoDialog(
-                        context,
-                        'Ingresos',
-                        'Recaudación acumulada por cuotas y membresías.',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  // Tarjeta 3: Por vencer
-                  Expanded(
-                    child: _buildMetricCard(
-                      context: context,
-                      icon: Icons.credit_card_outlined,
-                      iconColor: const Color(0xFFFFB300),
-                      iconBgColor: const Color(0xFFFFB300).withValues(alpha: 0.12),
-                      title: 'Socios activos',
-                      value: '18',
-                      bottomText: 'Ver detalle',
-                      bottomTextColor: const Color(0xFFFFB300),
-                      onBottomTap: () {
-                        if (onNavigateToTab != null) {
-                          onNavigateToTab!(1); // Ir a Socios
-                        }
-                      },
-                      onInfoTap: () => _showInfoDialog(
-                        context,
-                        'Por Vencer',
-                        'Socios cuyas membresías vencen en los próximos 7 días.',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Tarjeta 4: En el gym / tiempo real
-                  Expanded(
-                    child: _buildMetricCard(
-                      context: context,
-                      icon: Icons.login_rounded,
-                      iconColor: const Color(0xFF03A9F4),
-                      iconBgColor: const Color(0xFF03A9F4).withValues(alpha: 0.12),
-                      title: 'Socios activos',
-                      value: '73',
-                      bottomText: 'En tiempo real',
-                      bottomTextColor: const Color(0xFF03A9F4),
-                      onInfoTap: () => _showInfoDialog(
-                        context,
-                        'Asistencias en Tiempo Real',
-                        'Socios registrados en sala durante el turno actual.',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 22),
-
-              // 3. Sección de Acciones Rápidas
-              const Text(
-                'Acciones rapidas',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  ],
                 ),
-              ),
 
-              const SizedBox(height: 12),
+                const SizedBox(height: 18),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildQuickAction(
-                    icon: Icons.person_add_alt_1_outlined,
-                    label: 'Nuevo socio',
-                    onTap: () {
-                      if (onNavigateToTab != null) {
-                        onNavigateToTab!(1); // Pestaña Socios
-                      }
-                    },
+                // 2. Grilla 2x2 de Tarjetas de Métricas (KPIs Reales)
+                Row(
+                  children: [
+                    // Tarjeta 1: Socios activos
+                    Expanded(
+                      child: _buildMetricCard(
+                        context: context,
+                        icon: Icons.people_alt_outlined,
+                        iconColor: const Color(0xFF00E676),
+                        iconBgColor: const Color(0xFF00E676).withValues(alpha: 0.12),
+                        title: 'Socios activos',
+                        value: '${_dashboard.sociosActivos}',
+                        bottomText: '▲ ${_dashboard.sociosNuevosMes} nuevos',
+                        bottomTextColor: const Color(0xFF00E676),
+                        onBottomTap: () {
+                          if (widget.onNavigateToTab != null) widget.onNavigateToTab!(1);
+                        },
+                        onInfoTap: () => _showInfoDialog(
+                          context,
+                          'Socios Activos',
+                          'Total de socios con membresía vigente al día de hoy. De un total registrado de ${_dashboard.totalSocios}.',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Tarjeta 2: Ingresos
+                    Expanded(
+                      child: _buildMetricCard(
+                        context: context,
+                        icon: Icons.attach_money_rounded,
+                        iconColor: const Color(0xFF00E676),
+                        iconBgColor: const Color(0xFF00E676).withValues(alpha: 0.12),
+                        title: 'Ingresos mes',
+                        value: '\$ ${_formatMoney(_dashboard.recaudacionMesActual)}',
+                        bottomText: '${_dashboard.variacionIngresos >= 0 ? "▲" : "▼"} ${_dashboard.variacionIngresos}% vs anterior',
+                        bottomTextColor: _dashboard.variacionIngresos >= 0 ? const Color(0xFF00E676) : Colors.redAccent,
+                        onBottomTap: () {
+                          if (widget.onNavigateToTab != null) widget.onNavigateToTab!(2);
+                        },
+                        onInfoTap: () => _showInfoDialog(
+                          context,
+                          'Ingresos del Mes',
+                          'Recaudación acumulada por cuotas y suscripciones durante el mes en curso.',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                Row(
+                  children: [
+                    // Tarjeta 3: Por vencer
+                    Expanded(
+                      child: _buildMetricCard(
+                        context: context,
+                        icon: Icons.credit_card_outlined,
+                        iconColor: const Color(0xFFFFB300),
+                        iconBgColor: const Color(0xFFFFB300).withValues(alpha: 0.12),
+                        title: 'Por vencer',
+                        value: '${_dashboard.membresiasPorVencer}',
+                        bottomText: '${_dashboard.membresiasVencidas} vencidas',
+                        bottomTextColor: const Color(0xFFFFB300),
+                        onBottomTap: () {
+                          if (widget.onNavigateToTab != null) widget.onNavigateToTab!(1);
+                        },
+                        onInfoTap: () => _showInfoDialog(
+                          context,
+                          'Membresías por Vencer',
+                          'Socios con membresías que vencen en los próximos 7 días, y ${_dashboard.membresiasVencidas} ya vencidas.',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Tarjeta 4: Asistencias
+                    Expanded(
+                      child: _buildMetricCard(
+                        context: context,
+                        icon: Icons.login_rounded,
+                        iconColor: const Color(0xFF03A9F4),
+                        iconBgColor: const Color(0xFF03A9F4).withValues(alpha: 0.12),
+                        title: 'Asistencias hoy',
+                        value: '${_dashboard.asistenciasHoy}',
+                        bottomText: '${_dashboard.asistenciasMesActual} en el mes',
+                        bottomTextColor: const Color(0xFF03A9F4),
+                        onBottomTap: () {
+                          if (widget.onNavigateToTab != null) widget.onNavigateToTab!(3);
+                        },
+                        onInfoTap: () => _showInfoDialog(
+                          context,
+                          'Asistencias',
+                          'Total de ingresos al gimnasio registrados hoy y acumulado mensual.',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 22),
+
+                // 3. Sección de Acciones Rápidas
+                const Text(
+                  'Acciones rápidas',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
-                  _buildQuickAction(
-                    icon: Icons.attach_money_rounded,
-                    label: 'Registrar\npago',
-                    onTap: () {
-                      if (onNavigateToTab != null) {
-                        onNavigateToTab!(2); // Pestaña Pagos
-                      }
-                    },
+                ),
+
+                const SizedBox(height: 12),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildQuickAction(
+                      icon: Icons.person_add_alt_1_outlined,
+                      label: 'Nuevo socio',
+                      onTap: () {
+                        if (widget.onNavigateToTab != null) widget.onNavigateToTab!(1);
+                      },
+                    ),
+                    _buildQuickAction(
+                      icon: Icons.attach_money_rounded,
+                      label: 'Registrar\npago',
+                      onTap: () {
+                        if (widget.onNavigateToTab != null) widget.onNavigateToTab!(2);
+                      },
+                    ),
+                    _buildQuickAction(
+                      icon: Icons.qr_code_scanner_rounded,
+                      label: 'Marcar\nasistencia',
+                      onTap: () {
+                        if (widget.onNavigateToTab != null) widget.onNavigateToTab!(3);
+                      },
+                    ),
+                    _buildQuickAction(
+                      icon: Icons.play_circle_outline_rounded,
+                      label: 'Videos',
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (context) => const VideosDuenoScreen()),
+                        );
+                      },
+                    ),
+                    _buildQuickAction(
+                      icon: Icons.bar_chart_rounded,
+                      label: 'Reportes',
+                      onTap: () => _showReportesModal(context),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // 4. Próximos Vencimientos / Actividad Reciente
+                if (_dashboard.proximosVencimientos.isNotEmpty) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Próximos Vencimientos',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          if (widget.onNavigateToTab != null) widget.onNavigateToTab!(1);
+                        },
+                        child: const Text('Ver todos', style: TextStyle(color: Color(0xFF00E676), fontSize: 13)),
+                      ),
+                    ],
                   ),
-                  _buildQuickAction(
-                    icon: Icons.qr_code_scanner_rounded,
-                    label: 'Marcar\nasistencia',
-                    onTap: () {
-                      if (onNavigateToTab != null) {
-                        onNavigateToTab!(3); // Pestaña Asistencia
-                      }
-                    },
-                  ),
-                  _buildQuickAction(
-                    icon: Icons.play_circle_outline_rounded,
-                    label: 'Videos',
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const VideosDuenoScreen()),
-                      );
-                    },
-                  ),
-                  _buildQuickAction(
-                    icon: Icons.bar_chart_rounded,
-                    label: 'Reportes',
-                    onTap: () => _showReportesModal(context),
+                  const SizedBox(height: 8),
+                  ..._dashboard.proximosVencimientos.take(4).map(
+                    (v) => Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF161D21),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF243037)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFB300).withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.schedule_rounded, color: Color(0xFFFFB300), size: 18),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  v.socioNombre,
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Plan ${v.plan} • Vence: ${v.fechaVencimiento?.split("T")[0] ?? "Pronto"}',
+                                  style: const TextStyle(color: Color(0xFF8A98A0), fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right, color: Color(0xFF7A8B94), size: 18),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
-              ),
 
-
-
-              const SizedBox(height: 20),
-            ],
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
@@ -378,7 +502,6 @@ class HomeScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Fila superior: Icono + Título + Info icon
           Row(
             children: [
               Container(
@@ -413,7 +536,6 @@ class HomeScreen extends StatelessWidget {
           ),
           const SizedBox(height: 10),
 
-          // Valor numérico grande
           Text(
             value,
             style: const TextStyle(
@@ -425,7 +547,6 @@ class HomeScreen extends StatelessWidget {
           ),
           const SizedBox(height: 4),
 
-          // Texto inferior o enlace
           GestureDetector(
             onTap: onBottomTap,
             child: Text(
@@ -442,7 +563,6 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // Widget para botón de Acción Rápida
   Widget _buildQuickAction({
     required IconData icon,
     required String label,

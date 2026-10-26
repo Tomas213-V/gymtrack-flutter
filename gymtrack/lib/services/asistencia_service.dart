@@ -163,4 +163,26 @@ class AsistenciaService {
       tendencia: 'neutral',
     );
   }
+
+  /// Obtiene los datos del código QR del gimnasio para que los socios lo escaneen
+  Future<Map<String, dynamic>?> getQRGimnasio() async {
+    final token = AuthService().token;
+    try {
+      final uri = Uri.parse(ApiConfig.asistenciasQrGimnasioUrl);
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
 }
+

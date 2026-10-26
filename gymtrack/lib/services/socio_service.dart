@@ -6,6 +6,22 @@ import 'api_config.dart';
 import 'auth_service.dart';
 
 
+class CreateSocioResult {
+  final bool success;
+  final String message;
+  final bool alertaVinculacion;
+  final String? gimnasioNombre;
+  final Map<String, dynamic>? data;
+
+  const CreateSocioResult({
+    required this.success,
+    required this.message,
+    this.alertaVinculacion = false,
+    this.gimnasioNombre,
+    this.data,
+  });
+}
+
 class SocioService {
   static final SocioService _instance = SocioService._internal();
   factory SocioService() => _instance;
@@ -169,7 +185,33 @@ class SocioService {
     return SocioStatsModel.defaultStats();
   }
 
-  Future<bool> createSocio({
+
+  /// Verifica preventivamente si el DNI existe en este gimnasio o si está activo en otro
+  Future<Map<String, dynamic>?> verificarDni(String dni) async {
+    final cleanDni = dni.trim();
+    if (cleanDni.isEmpty) return null;
+
+    final token = AuthService().token;
+    try {
+      final uri = Uri.parse(ApiConfig.verificarDniUrl).replace(
+        queryParameters: {'dni': cleanDni},
+      );
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<CreateSocioResult> createSocio({
     required String nombre,
     required String apellido,
     required String dni,
@@ -207,9 +249,27 @@ class SocioService {
           )
           .timeout(const Duration(seconds: 10));
 
-      return response.statusCode == 201;
-    } catch (_) {
-      return false;
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 201) {
+        return CreateSocioResult(
+          success: true,
+          message: data['mensaje'] ?? 'Socio registrado exitosamente.',
+          data: data is Map<String, dynamic> ? data : null,
+        );
+      } else {
+        return CreateSocioResult(
+          success: false,
+          message: data['error'] ?? 'Error al registrar el socio.',
+          alertaVinculacion: data['alertaVinculacion'] == true,
+          gimnasioNombre: data['gimnasioNombre']?.toString(),
+          data: data is Map<String, dynamic> ? data : null,
+        );
+      }
+    } catch (e) {
+      return CreateSocioResult(
+        success: false,
+        message: 'Error de conexión con el servidor: $e',
+      );
     }
   }
 

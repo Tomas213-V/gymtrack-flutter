@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/socio/qr_checkin_dialog.dart';
+import 'ejercicios/socio_ejercicios_screen.dart';
 import 'login_socio_screen.dart';
 import 'perfil_socio_screen.dart';
+import 'planes_disponibles_screen.dart';
 import 'videos/videos_socio_screen.dart';
 
 class MasSocioScreen extends StatelessWidget {
@@ -70,6 +73,17 @@ class MasSocioScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           children: [
+            // 0. Check-in con QR
+            _buildMenuItem(
+              icon: Icons.qr_code_scanner_rounded,
+              title: 'Check-in con QR',
+              onTap: () {
+                QrCheckinDialog.show(context);
+              },
+            ),
+
+            const SizedBox(height: 10),
+
             // 1. Mi perfil
             _buildMenuItem(
               icon: Icons.person_outline_rounded,
@@ -94,10 +108,23 @@ class MasSocioScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
 
+            // 2.b Explorar Planes
+            _buildMenuItem(
+              icon: Icons.stars_rounded,
+              title: 'Explorar Planes de Membresía',
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const PlanesDisponiblesScreen()),
+                );
+              },
+            ),
+            const SizedBox(height: 10),
+
             // 3. Mis pagos
             _buildMenuItem(
               icon: Icons.attach_money_rounded,
               title: 'Mis pagos',
+
               onTap: () {
                 if (onNavigateToTab != null) {
                   onNavigateToTab!(3);
@@ -114,6 +141,18 @@ class MasSocioScreen extends StatelessWidget {
                 if (onNavigateToTab != null) {
                   onNavigateToTab!(1);
                 }
+              },
+            ),
+            const SizedBox(height: 10),
+
+            // 4.b Biblioteca de Ejercicios
+            _buildMenuItem(
+              icon: Icons.sports_gymnastics_rounded,
+              title: 'Biblioteca de Ejercicios',
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const SocioEjerciciosScreen()),
+                );
               },
             ),
             const SizedBox(height: 10),

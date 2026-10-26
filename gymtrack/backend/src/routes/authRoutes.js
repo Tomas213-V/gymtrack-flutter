@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 // Importamos los controladores de autenticación
-const { registerOwner, login, loginSocio, getMe } = require('../controllers/authController');
+const { registerOwner, login, loginSocio, getMe, updateOwnerProfile } = require('../controllers/authController');
 
 // Importamos middleware para proteger rutas que requieran token JWT
 const { verifyToken } = require('../middlewares/authMiddleware');
@@ -19,8 +19,12 @@ router.post('/login', login);
 // Endpoint: POST /api/auth/login-socio
 router.post('/login-socio', loginSocio);
 
-// Ruta GET para obtener los datos del usuario autenticado (requiere Bearer token)
+// Rutas GET y PUT para consultar y actualizar el perfil del usuario autenticado (requiere Bearer token)
 // Endpoint: GET /api/auth/me
 router.get('/me', verifyToken, getMe);
+
+// Endpoint: PUT /api/auth/me y /api/auth/perfil
+router.put('/me', verifyToken, updateOwnerProfile);
+router.put('/perfil', verifyToken, updateOwnerProfile);
 
 module.exports = router;

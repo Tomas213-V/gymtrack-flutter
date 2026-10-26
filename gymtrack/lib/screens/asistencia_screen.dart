@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/asistencia_model.dart';
 import '../services/asistencia_service.dart';
+import '../widgets/dueno/qr_gimnasio_dialog.dart';
+
 
 class AsistenciaScreen extends StatefulWidget {
   const AsistenciaScreen({super.key});
@@ -274,8 +276,39 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 8),
+
+                    // Botón Mostrar QR para el ingreso de socios
+                    InkWell(
+                      onTap: () => QrGimnasioDialog.show(context),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00E676).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF00E676), width: 1),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.qr_code_2_rounded, size: 16, color: Color(0xFF00E676)),
+                            SizedBox(width: 5),
+                            Text(
+                              'QR Check-in',
+                              style: TextStyle(
+                                color: Color(0xFF00E676),
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
+
 
                 const SizedBox(height: 18),
 
@@ -510,17 +543,23 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Color(0xFF8F9CA3),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF8F9CA3),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
+              const SizedBox(width: 4),
               Icon(icon, color: iconColor, size: 16),
             ],
           ),
+
           Text(
             value,
             style: const TextStyle(

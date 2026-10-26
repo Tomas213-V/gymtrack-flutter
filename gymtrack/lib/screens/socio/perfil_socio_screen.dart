@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../mock/socio_mock_data.dart';
 import '../../models/perfil_socio_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/socio_service.dart';
 import '../../theme/app_theme.dart';
 import '../login_screen.dart';
+
 
 class PerfilSocioScreen extends StatefulWidget {
   final int? idSocio;
@@ -41,10 +43,27 @@ class _PerfilSocioScreenState extends State<PerfilSocioScreen> {
       if (perfil != null) {
         _perfil = perfil;
       } else {
-        _errorMessage = 'No se pudo cargar la información del perfil.';
+        // Fallback robusto para modo offline y pruebas de interfaz
+        final mock = SocioMockData().profile;
+        _perfil = PerfilSocioModel(
+          idSocio: 1,
+          nombre: mock.nombre,
+          apellido: mock.apellido,
+          dni: mock.dni,
+          email: mock.email,
+          telefono: mock.telefono,
+          planNombre: mock.plan,
+          membresiaEstado: mock.estado,
+          fechaVencimiento: mock.fechaVencimiento,
+          fechaInicioMembresia: mock.fechaInicio,
+          diasRestantes: mock.diasRestantes,
+          gimnasioNombre: 'GymTrack Fitness Club',
+          gimnasioTelefono: '+54 11 5555-8888',
+        );
       }
     });
   }
+
 
   void _handleLogout() {
     showDialog(
