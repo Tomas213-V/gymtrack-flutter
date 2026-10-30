@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../mock/video_mock_data.dart';
 import '../../../models/video_model.dart';
+import '../../../repositories/video_repository.dart';
 import '../../../theme/app_theme.dart';
 import '../../../widgets/socio/socio_badge.dart';
 import 'agregar_video_screen.dart';
@@ -14,7 +14,25 @@ class VideosDuenoScreen extends StatefulWidget {
 }
 
 class _VideosDuenoScreenState extends State<VideosDuenoScreen> {
-  final _mockData = VideoMockData();
+  final IVideoRepository _videoRepository = VideoRepository.instance;
+  List<VideoModel> _videos = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarVideos();
+  }
+
+  Future<void> _cargarVideos() async {
+    setState(() => _isLoading = true);
+    final lista = await _videoRepository.getVideos();
+    if (!mounted) return;
+    setState(() {
+      _videos = lista;
+      _isLoading = false;
+    });
+  }
 
   void _confirmarEliminarVideo(VideoModel video) {
     showDialog(
@@ -36,12 +54,14 @@ class _VideosDuenoScreenState extends State<VideosDuenoScreen> {
             child: const Text('Cancelar', style: TextStyle(color: Color(0xFF8E8E93))),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
               Navigator.of(context).pop();
-              _mockData.deleteVideo(video.id);
-              setState(() {});
+              await _videoRepository.deleteVideo(video.id);
+              await _cargarVideos();
 
-              ScaffoldMessenger.of(context).showSnackBar(
+              if (!mounted) return;
+              scaffoldMessenger.showSnackBar(
                 const SnackBar(
                   content: Text('Video eliminado correctamente'),
                   backgroundColor: Color(0xFF2E2E2E),
@@ -63,8 +83,9 @@ class _VideosDuenoScreenState extends State<VideosDuenoScreen> {
     final result = await Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const AgregarVideoScreen()),
     );
-    if (result == true || mounted) {
-      setState(() {});
+    if (!mounted) return;
+    if (result == true) {
+      await _cargarVideos();
     }
   }
 
@@ -72,15 +93,14 @@ class _VideosDuenoScreenState extends State<VideosDuenoScreen> {
     final result = await Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => EditarVideoScreen(video: video)),
     );
-    if (result == true || mounted) {
-      setState(() {});
+    if (!mounted) return;
+    if (result == true) {
+      await _cargarVideos();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final videos = _mockData.videos;
-
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
@@ -125,49 +145,28 @@ class _VideosDuenoScreenState extends State<VideosDuenoScreen> {
             ),
             const SizedBox(height: 12),
 
-            // Lista de videos
+            // Lista de videos cargada dinámicamente desde el repositorio
             Expanded(
-              child: videos.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.video_library_outlined,
-                            size: 64,
-                            color: Colors.white.withValues(alpha: 0.2),
-                          ),
-                          const SizedBox(height: 14),
-                          const Text(
-                            'No hay videos cargados',
-                            style: TextStyle(
-                              color: Color(0xFF8E8E93),
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          const Text(
-                            'Presioná el botón "+" para publicar tu primer video.',
-                            style: TextStyle(
-                              color: Color(0xFF6E6E73),
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
+              child: _isLoading && _videos.isEmpty
+                  ? const Center(
+                      child: CircularProgressIndicator(color: Color(0xFF7DE610)),
                     )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                      itemCount: videos.length,
-                      itemBuilder: (context, index) {
-                        final video = videos[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 14),
-                          child: _buildVideoCard(video),
-                        );
-                      },
-                    ),
+                  : _videos.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No hay videos disponibles',
+                            style: TextStyle(color: Color(0xFF8E8E93), fontSize: 14),
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                          itemCount: _videos.length,
+                          separatorBuilder: (context, index) => const SizedBox(height: 14),
+                          itemBuilder: (context, index) {
+                            final video = _videos[index];
+                            return _buildVideoCard(video);
+                          },
+                        ),
             ),
           ],
         ),
@@ -178,97 +177,41 @@ class _VideosDuenoScreenState extends State<VideosDuenoScreen> {
   Widget _buildVideoCard(VideoModel video) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1B1B1B),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: const Color(0xFF282828),
-          width: 1,
-        ),
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF2C2C2E)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Banner / Thumbnail con botón de reproducción y duración
-          Stack(
-            children: [
-              Container(
-                height: 140,
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF141414),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(17)),
-                ),
-                child: Center(
-                  child: Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF7DE610).withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFF7DE610).withValues(alpha: 0.5),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.play_arrow_rounded,
-                      color: Color(0xFF7DE610),
-                      size: 30,
-                    ),
-                  ),
-                ),
-              ),
-              // Badge de Categoría arriba a la izquierda
-              Positioned(
-                top: 12,
-                left: 12,
-                child: SocioBadge.pill(
-                  text: video.categoria,
-                  textColor: const Color(0xFF7DE610),
-                ),
-              ),
-              // Duración abajo a la derecha
-              Positioned(
-                bottom: 10,
-                right: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.75),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.access_time_rounded, size: 12, color: Colors.white70),
-                      const SizedBox(width: 4),
-                      Text(
-                        video.duracion,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          // Información del video y acciones
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-            child: Column(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
+                // Thumbnail / Icono de Video
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2C2C2E),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.play_circle_fill_rounded,
+                      color: Color(0xFF7DE610),
+                      size: 28,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                // Título y categoría
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
                         video.titulo,
                         style: const TextStyle(
                           color: Colors.white,
@@ -276,70 +219,75 @@ class _VideosDuenoScreenState extends State<VideosDuenoScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    SocioBadge.active(text: video.estado),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '${video.categoria} · ${video.duracion}',
-                  style: const TextStyle(
-                    color: Color(0xFF8E8E93),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          SocioBadge(
+                            text: video.categoria,
+                            backgroundColor: const Color(0xFF2C2C2E),
+                            textColor: const Color(0xFFCCCCCC),
+                          ),
+                          SocioBadge(
+                            text: video.duracion,
+                            backgroundColor: const Color(0xFF2C2C2E),
+                            textColor: const Color(0xFF8E8E93),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 12),
-                const Divider(color: Color(0xFF282828), height: 1),
-                const SizedBox(height: 8),
-
-                // Botones Editar y Eliminar
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    // Botón Editar
-                    TextButton.icon(
-                      onPressed: () => _navegarAEditar(video),
-                      icon: const Icon(
-                        Icons.edit_outlined,
-                        size: 17,
-                        color: Color(0xFF7DE610),
-                      ),
-                      label: const Text(
-                        'Editar',
-                        style: TextStyle(
-                          color: Color(0xFF7DE610),
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-
-                    // Botón Eliminar
-                    TextButton.icon(
-                      onPressed: () => _confirmarEliminarVideo(video),
-                      icon: const Icon(
-                        Icons.delete_outline_rounded,
-                        size: 17,
-                        color: Color(0xFFEF4444),
-                      ),
-                      label: const Text(
-                        'Eliminar',
-                        style: TextStyle(
-                          color: Color(0xFFEF4444),
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            // Descripción resumida
+            Text(
+              video.descripcion,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Color(0xFF8E8E93),
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 14),
+            const Divider(color: Color(0xFF2C2C2E), height: 1),
+            const SizedBox(height: 10),
+            // Acciones: Editar y Eliminar
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: () => _navegarAEditar(video),
+                  icon: const Icon(Icons.edit_outlined, size: 16, color: Color(0xFF7DE610)),
+                  label: const Text(
+                    'Editar',
+                    style: TextStyle(
+                      color: Color(0xFF7DE610),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: () => _confirmarEliminarVideo(video),
+                  icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFEF4444)),
+                  label: const Text(
+                    'Eliminar',
+                    style: TextStyle(
+                      color: Color(0xFFEF4444),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../mock/socio_mock_data.dart';
-import '../../services/socio_dashboard_service.dart';
+import '../../repositories/progreso_repository.dart';
 import '../../theme/app_theme.dart';
 
 class RegistrarProgresoScreen extends StatefulWidget {
@@ -79,16 +78,8 @@ class _RegistrarProgresoScreenState extends State<RegistrarProgresoScreen> {
     final brazo = double.tryParse(_brazoController.text.replaceAll(',', '.'));
     final obs = _observacionesController.text.trim();
 
-    final isoDate = '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
-
-    // Llamada al backend para persistir el peso del socio
-    SocioDashboardService().registrarProgreso(
-      peso: peso,
-      observaciones: obs.isNotEmpty ? obs : 'Registro de progreso',
-      fecha: isoDate,
-    );
-
-    SocioMockData().agregarProgreso(
+    // Persistencia y sincronización desacoplada a través del Repositorio de Progreso
+    ProgresoRepository.instance.registrarProgreso(
       peso: peso,
       fecha: _formatDate(_selectedDate),
       nota: obs.isNotEmpty ? obs : 'Registro de progreso',
@@ -96,6 +87,7 @@ class _RegistrarProgresoScreenState extends State<RegistrarProgresoScreen> {
       cintura: cintura,
       cadera: cadera,
       brazo: brazo,
+      rawDate: _selectedDate,
     );
 
     ScaffoldMessenger.of(context).showSnackBar(

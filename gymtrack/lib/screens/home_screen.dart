@@ -184,6 +184,14 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (_isLoading)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: LinearProgressIndicator(
+                      color: Color(0xFF00E676),
+                      backgroundColor: Colors.transparent,
+                    ),
+                  ),
                 // 1. Encabezado de Saludo + Selector de Fecha
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../models/ejercicio_model.dart';
-import '../../../services/ejercicio_service.dart';
+import '../../../repositories/ejercicio_repository.dart';
 import '../../../theme/app_theme.dart';
 
 class SocioEjerciciosScreen extends StatefulWidget {
@@ -11,7 +11,7 @@ class SocioEjerciciosScreen extends StatefulWidget {
 }
 
 class _SocioEjerciciosScreenState extends State<SocioEjerciciosScreen> {
-  final EjercicioService _ejercicioService = EjercicioService();
+  final IEjercicioRepository _ejercicioRepository = EjercicioRepository.instance;
 
   List<EjercicioModel> _ejercicios = [];
   bool _isLoading = true;
@@ -53,7 +53,7 @@ class _SocioEjerciciosScreenState extends State<SocioEjerciciosScreen> {
   Future<void> _cargarEjercicios() async {
     setState(() => _isLoading = true);
     try {
-      final list = await _ejercicioService.getEjerciciosSocio(
+      final list = await _ejercicioRepository.getEjerciciosSocio(
         origen: _filtroOrigen,
         grupoMuscular: _filtroGrupo,
         search: _searchQuery,
@@ -233,7 +233,7 @@ class _SocioEjerciciosScreenState extends State<SocioEjerciciosScreen> {
 
                         bool ok = false;
                         if (esEdicion) {
-                          ok = await _ejercicioService.actualizarEjercicioSocio(
+                          ok = await _ejercicioRepository.actualizarEjercicioSocio(
                             idEjercicio: item.idEjercicio,
                             nombre: nombre,
                             grupoMuscular: selectedGrupo,
@@ -241,7 +241,7 @@ class _SocioEjerciciosScreenState extends State<SocioEjerciciosScreen> {
                             descripcion: descCtrl.text.trim(),
                           );
                         } else {
-                          final res = await _ejercicioService.crearEjercicioSocio(
+                          final res = await _ejercicioRepository.crearEjercicioSocio(
                             nombre: nombre,
                             grupoMuscular: selectedGrupo,
                             dificultad: selectedDificultad,
@@ -309,7 +309,7 @@ class _SocioEjerciciosScreenState extends State<SocioEjerciciosScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
             onPressed: () async {
               Navigator.of(ctx).pop();
-              final ok = await _ejercicioService.eliminarEjercicioSocio(item.idEjercicio);
+              final ok = await _ejercicioRepository.eliminarEjercicioSocio(item.idEjercicio);
               if (!mounted) return;
               if (ok) {
                 ScaffoldMessenger.of(context).showSnackBar(

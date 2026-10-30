@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../mock/socio_mock_data.dart';
+import '../../models/socio_mock_models.dart';
+import '../../repositories/progreso_repository.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/socio/socio_weight_chart.dart';
 import 'registrar_progreso_screen.dart';
@@ -17,7 +18,32 @@ class MiProgresoScreen extends StatefulWidget {
 }
 
 class _MiProgresoScreenState extends State<MiProgresoScreen> {
-  final _mockData = SocioMockData();
+  final IProgresoRepository _progresoRepository = ProgresoRepository.instance;
+  SocioProfileModel? _profile;
+  List<ProgresoRegistroModel> _registros = [];
+  List<ProgresoPuntoModel> _puntosGrafico = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarProgreso();
+  }
+
+  Future<void> _cargarProgreso() async {
+    setState(() => _isLoading = true);
+    final prof = await _progresoRepository.getPerfilProgreso();
+    final regs = await _progresoRepository.getRegistrosProgreso();
+    final pts = await _progresoRepository.getPuntosGrafico();
+
+    if (!mounted) return;
+    setState(() {
+      _profile = prof;
+      _registros = regs;
+      _puntosGrafico = pts;
+      _isLoading = false;
+    });
+  }
 
   Future<void> _navegarARegistrar() async {
     final result = await Navigator.of(context).push(
@@ -27,14 +53,14 @@ class _MiProgresoScreenState extends State<MiProgresoScreen> {
     );
 
     if (result == true || mounted) {
-      setState(() {});
+      await _cargarProgreso();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final profile = _mockData.profile;
-    final registros = _mockData.registrosProgreso;
+    final profile = _profile;
+    final registros = _registros;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -67,148 +93,170 @@ class _MiProgresoScreenState extends State<MiProgresoScreen> {
         child: const Icon(Icons.add, size: 28, color: Colors.black),
       ),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          children: [
-            // Fila superior de métricas de progreso
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
-                    label: 'PESO ACTUAL',
-                    value: '${profile.pesoActual.toStringAsFixed(0)} kg',
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _buildStatCard(
-                    label: 'PESO INICIAL',
-                    value: '${profile.pesoInicial.toStringAsFixed(0)} kg',
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _buildStatCard(
-                    label: 'CAMBIO TOTAL',
-                    value: '${profile.cambioTotal > 0 ? "+" : ""}${profile.cambioTotal.toStringAsFixed(0)} kg',
-                    valueColor: const Color(0xFF7DE610),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
-                    label: 'ENTRENAMIENTOS',
-                    value: '${profile.totalEntrenamientos}',
-                  ),
-                ),
-                const SizedBox(width: 10),
-                const Expanded(child: SizedBox()),
-                const SizedBox(width: 10),
-                const Expanded(child: SizedBox()),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            // Sección Evolución de peso
-            const Text(
-              'Evolución de peso',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            SocioWeightChart(puntos: _mockData.puntosGrafico),
-
-            const SizedBox(height: 26),
-
-            // Sección Historial de registros
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Historial de registros',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                TextButton(
-                  onPressed: _navegarARegistrar,
-                  child: const Text(
-                    '+ Registrar',
-                    style: TextStyle(
-                      color: Color(0xFF7DE610),
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
+        child: _isLoading && profile == null
+            ? const Center(
+                child: CircularProgressIndicator(color: Color(0xFF7DE610)),
+              )
+            : SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Fila de Tarjetas de Estadísticas Principales
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            label: 'PESO ACTUAL',
+                            value: '${profile!.pesoActual.toStringAsFixed(1)} kg',
+                            valueColor: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _buildStatCard(
+                            label: 'PESO INICIAL',
+                            value: '${profile.pesoInicial.toStringAsFixed(0)} kg',
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _buildStatCard(
+                            label: 'CAMBIO TOTAL',
+                            value: '${profile.cambioTotal > 0 ? "+" : ""}${profile.cambioTotal.toStringAsFixed(0)} kg',
+                            valueColor: const Color(0xFF7DE610),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            // Lista de registros
-            ...registros.map((reg) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1B1B1B),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: const Color(0xFF282828),
-                      width: 1,
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            label: 'ENTRENAMIENTOS',
+                            value: '${profile.totalEntrenamientos}',
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        const Expanded(child: SizedBox()),
+                        const SizedBox(width: 10),
+                        const Expanded(child: SizedBox()),
+                      ],
                     ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            reg.fecha,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
+
+                    const SizedBox(height: 24),
+
+                    // Sección Evolución de peso
+                    const Text(
+                      'Evolución de peso',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SocioWeightChart(puntos: _puntosGrafico),
+
+                    const SizedBox(height: 26),
+
+                    // Sección Historial de registros
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Historial de registros',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _navegarARegistrar,
+                          child: const Text(
+                            '+ Registrar',
+                            style: TextStyle(
+                              color: Color(0xFF7DE610),
+                              fontSize: 13,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            reg.nota,
-                            style: const TextStyle(
-                              color: Color(0xFF8E8E93),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        '${reg.peso.toStringAsFixed(1)} kg',
-                        style: const TextStyle(
-                          color: Color(0xFF7DE610),
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Lista de registros
+                    ...registros.map((reg) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E1E1E),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFF2C2C2E)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2C2C2E),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.monitor_weight_outlined,
+                                    color: Color(0xFF7DE610),
+                                    size: 22,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      reg.fecha,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      reg.nota,
+                                      style: const TextStyle(
+                                        color: Color(0xFF8E8E93),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                '${reg.peso.toStringAsFixed(1)} kg',
+                                style: const TextStyle(
+                                  color: Color(0xFF7DE610),
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 40),
+                  ],
                 ),
-              );
-            }),
-            const SizedBox(height: 60), // Margen para el FAB
-          ],
-        ),
+              ),
       ),
     );
   }
@@ -219,14 +267,11 @@ class _MiProgresoScreenState extends State<MiProgresoScreen> {
     Color valueColor = Colors.white,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF1B1B1B),
+        color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: const Color(0xFF282828),
-          width: 1,
-        ),
+        border: Border.all(color: const Color(0xFF2C2C2E)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -235,8 +280,8 @@ class _MiProgresoScreenState extends State<MiProgresoScreen> {
             label,
             style: const TextStyle(
               color: Color(0xFF8E8E93),
-              fontSize: 9.5,
-              fontWeight: FontWeight.bold,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
               letterSpacing: 0.5,
             ),
           ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../mock/video_mock_data.dart';
 import '../../../models/video_model.dart';
+import '../../../repositories/video_repository.dart';
 import '../../../theme/app_theme.dart';
 
 class EditarVideoScreen extends StatefulWidget {
@@ -83,7 +83,7 @@ class _EditarVideoScreenState extends State<EditarVideoScreen> {
       infoEjercicio: _infoEjercicioController.text.trim(),
     );
 
-    VideoMockData().updateVideo(videoActualizado);
+    VideoRepository.instance.updateVideo(videoActualizado);
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(

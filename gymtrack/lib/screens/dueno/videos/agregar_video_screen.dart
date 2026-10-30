@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../mock/video_mock_data.dart';
 import '../../../models/video_model.dart';
+import '../../../repositories/video_repository.dart';
 import '../../../theme/app_theme.dart';
 
 class AgregarVideoScreen extends StatefulWidget {
@@ -68,7 +68,7 @@ class _AgregarVideoScreenState extends State<AgregarVideoScreen> {
           : 'Músculos involucrados en el movimiento.',
     );
 
-    VideoMockData().addVideo(nuevoVideo);
+    VideoRepository.instance.addVideo(nuevoVideo);
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
