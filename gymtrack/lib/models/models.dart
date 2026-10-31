@@ -4,7 +4,6 @@ library;
 export 'user_model.dart';
 export 'socio_model.dart';
 export 'perfil_socio_model.dart';
-export 'video_model.dart';
 export 'ejercicio_model.dart';
 export 'rutina_model.dart';
 export 'plan_membresia_model.dart';

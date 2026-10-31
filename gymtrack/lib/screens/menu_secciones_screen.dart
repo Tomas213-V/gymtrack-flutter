@@ -4,7 +4,6 @@ import 'dueno/ejercicios/ejercicios_screen.dart';
 import 'dueno/gimnasio/perfil_gimnasio_screen.dart';
 import 'dueno/planes/planes_membresia_screen.dart';
 import 'dueno/rutinas/rutinas_screen.dart';
-import 'dueno/videos/videos_dueno_screen.dart';
 
 
 class MenuSeccionesScreen extends StatelessWidget {
@@ -226,22 +225,7 @@ class MenuSeccionesScreen extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            // 5. Tarjeta de Videos
-            _buildOptionCard(
-              context: context,
-              icon: Icons.play_circle_outline_rounded,
-              title: 'Videos',
-              subtitle: 'Administrá el contenido para tus\nsocios',
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const VideosDuenoScreen()),
-                );
-              },
-            ),
-
-            const SizedBox(height: 16),
-
-            // 6. Tarjeta Contactar Soporte
+            // 5. Tarjeta Contactar Soporte
             _buildOptionCard(
               context: context,
               icon: Icons.headset_mic_outlined,

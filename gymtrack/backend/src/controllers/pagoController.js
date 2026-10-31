@@ -238,7 +238,37 @@ const registrarPago = async (req, res) => {
       return res.status(400).json({ error: 'El estado no es un valor permitido.' });
     }
 
+    // Resolver id_gimnasio de forma robusta
+    let gymId = id_gimnasio || req.usuario?.id_gimnasio;
+    if (!gymId && req.usuario?.id_usuario) {
+      const { data: g } = await supabase.from('gimnasio').select('id_gimnasio').eq('id_usuario', req.usuario.id_usuario).maybeSingle();
+      if (g?.id_gimnasio) gymId = g.id_gimnasio;
+    }
+    if (!gymId) {
+      const { data: fg } = await supabase.from('gimnasio').select('id_gimnasio').order('id_gimnasio', { ascending: true }).limit(1).maybeSingle();
+      if (fg?.id_gimnasio) gymId = fg.id_gimnasio;
+    }
+    id_gimnasio = gymId;
+
     let socioId = id_socio || null;
+
+    // Si no se pasó id_socio pero sí nombre del socio, intentar resolverlo por nombre
+    const nombreCandidate = (nombreSocio || req.body.socio_nombre || '').trim();
+    if (!socioId && !dniSocio && nombreCandidate) {
+      const partes = nombreCandidate.split(' ');
+      let sQuery = supabase.from('socio').select('id_socio, id_gimnasio, nombre, apellido, dni');
+      if (id_gimnasio) sQuery = sQuery.eq('id_gimnasio', id_gimnasio);
+      if (partes.length > 1) {
+        sQuery = sQuery.ilike('nombre', `%${partes[0]}%`).ilike('apellido', `%${partes.slice(1).join(' ')}%`);
+      } else {
+        sQuery = sQuery.or(`nombre.ilike.%${nombreCandidate}%,apellido.ilike.%${nombreCandidate}%`);
+      }
+      const { data: sFound } = await sQuery.limit(1).maybeSingle();
+      if (sFound) {
+        socioId = sFound.id_socio;
+        dniSocio = sFound.dni;
+      }
+    }
 
     // Si no se proporcionó id_socio pero sí DNI, buscar socio existente en este gimnasio
     if (!socioId && dniSocio) {
@@ -283,6 +313,33 @@ const registrarPago = async (req, res) => {
 
         if (errSocio) throw errSocio;
         socioId = nuevoSocio.id_socio;
+      }
+    }
+
+    if (!socioId && !id_membresia) {
+      if (nombreCandidate && id_gimnasio) {
+        const partesNombre = nombreCandidate.split(' ');
+        const { data: nuevoSocio } = await supabase
+          .from('socio')
+          .insert([{
+            id_gimnasio,
+            nombre: partesNombre[0] || 'Socio',
+            apellido: partesNombre.slice(1).join(' ') || '',
+            dni: '4' + Math.floor(1000000 + Math.random() * 9000000),
+            fecha_alta: new Date().toISOString().split('T')[0],
+            estado: 'activo'
+          }])
+          .select('id_socio')
+          .single();
+        if (nuevoSocio) socioId = nuevoSocio.id_socio;
+      } else if (id_gimnasio) {
+        const { data: firstSocio } = await supabase
+          .from('socio')
+          .select('id_socio')
+          .eq('id_gimnasio', id_gimnasio)
+          .limit(1)
+          .maybeSingle();
+        if (firstSocio) socioId = firstSocio.id_socio;
       }
     }
 

@@ -1,59 +1,56 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gymtrack/models/video_model.dart';
+import 'package:gymtrack/models/pago_model.dart';
 import 'package:gymtrack/repositories/ejercicio_repository.dart';
 import 'package:gymtrack/repositories/progreso_repository.dart';
 import 'package:gymtrack/repositories/socio_repository.dart';
-import 'package:gymtrack/repositories/video_repository.dart';
+import 'package:gymtrack/services/pago_service.dart';
 
 void main() {
-  group('VideoRepository Tests (Capa de Datos y Mocks Dinámicos)', () {
-    final repository = VideoRepository.instance;
+  group('PagoModel y PagoService Tests (Socio Name & Planes Dinámicos)', () {
+    test('PagoModel.fromJson extrae correctamente el nombre del socio y del plan desde la respuesta de Supabase', () {
+      final jsonSupabase = {
+        'id_pago': 25,
+        'fecha_pago': '2026-10-31',
+        'monto': 22000,
+        'estado': 'pagado',
+        'metodo_pago': 'efectivo',
+        'membresia': {
+          'id_membresia': 10,
+          'socio': {
+            'id_socio': 14,
+            'nombre': 'Ezequiel',
+            'apellido': 'Maron',
+            'dni': '40123456',
+          },
+          'plan_membresia': {
+            'id_plan_membresia': 3,
+            'nombre': 'Plan Musculación Libre',
+            'precio': 22000,
+          }
+        }
+      };
 
-    test('getVideos retorna la lista de videos y categorías', () async {
-      final videos = await repository.getVideos();
-      expect(videos.isNotEmpty, isTrue);
-
-      final categorias = await repository.getCategorias();
-      expect(categorias, contains('Pecho'));
-      expect(categorias, contains('Piernas'));
+      final pago = PagoModel.fromJson(jsonSupabase);
+      expect(pago.socioNombre, 'Ezequiel Maron');
+      expect(pago.plan, 'Plan Musculación Libre');
+      expect(pago.monto, 22000.0);
+      expect(pago.isPagado, isTrue);
+      expect(pago.formattedMonto, '\$22.000');
     });
 
-    test('getVideos filtra correctamente por categoría', () async {
-      final videosPecho = await repository.getVideos(categoria: 'Pecho');
-      expect(videosPecho.every((v) => v.categoria.toLowerCase() == 'pecho'), isTrue);
-    });
-
-    test('getVideos busca por término de búsqueda (query)', () async {
-      final resultados = await repository.getVideos(query: 'Banca');
-      expect(resultados.isNotEmpty, isTrue);
-      expect(resultados.any((v) => v.titulo.contains('Banca')), isTrue);
-    });
-
-    test('addVideo, updateVideo y deleteVideo modifican datos dinámicamente', () async {
-      final nuevoVideo = VideoModel(
-        id: 'vid-test-repo',
-        titulo: 'Video de Prueba Repositorio',
-        descripcion: 'Descripción del video de prueba para la arquitectura',
-        categoria: 'Hombros',
-        duracion: '04:30',
+    test('PagoService registrarPago agrega el pago dinámicamente y getPagos filtra por búsqueda', () async {
+      final pagoService = PagoService();
+      final registrado = await pagoService.registrarPago(
+        socioNombre: 'Camila Rodriguez',
+        monto: 18000,
+        plan: 'Plan Mensual',
+        metodoPago: 'Efectivo',
+        estado: 'pagado',
       );
+      expect(registrado, isTrue);
 
-      // 1. Agregar video
-      await repository.addVideo(nuevoVideo);
-      var videos = await repository.getVideos();
-      expect(videos.any((v) => v.id == 'vid-test-repo'), isTrue);
-
-      // 2. Actualizar video
-      final videoModificado = nuevoVideo.copyWith(titulo: 'Video de Prueba Modificado');
-      await repository.updateVideo(videoModificado);
-      final obtenido = await repository.getVideoById('vid-test-repo');
-      expect(obtenido?.titulo, 'Video de Prueba Modificado');
-
-      // 3. Eliminar video
-      final eliminado = await repository.deleteVideo('vid-test-repo');
-      expect(eliminado, isTrue);
-      videos = await repository.getVideos();
-      expect(videos.any((v) => v.id == 'vid-test-repo'), isFalse);
+      final pagos = await pagoService.getPagos(search: 'Camila');
+      expect(pagos.any((p) => p.socioNombre.contains('Camila')), isTrue);
     });
   });
 

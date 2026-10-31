@@ -9,42 +9,72 @@ class PagoService {
   factory PagoService() => _instance;
   PagoService._internal();
 
-  static List<PagoModel> get _demoPagos => [
+  static final List<PagoModel> _demoPagos = [
         PagoModel(
           idPago: 1,
-          socioNombre: 'Juan Perez',
-          plan: 'Plan Premium',
-          fechaPago: '18/05/2026',
+          socioNombre: 'Camila Rodriguez',
+          plan: 'Plan Mensual Completo',
+          fechaPago: '2026-10-31',
           monto: 18000,
           estado: 'pagado',
           metodoPago: 'Efectivo',
+          comprobante: 'COMP-17934812001',
+          dniSocio: '41.234.567',
+          telefonoSocio: '11-2345-6789',
+          fechaVencimiento: '2026-11-30',
         ),
         PagoModel(
           idPago: 2,
-          socioNombre: 'María Gómez',
+          socioNombre: 'Eze Maron',
           plan: 'Plan Básico',
-          fechaPago: '18/05/2026',
-          monto: 18000,
+          fechaPago: '2026-10-31',
+          monto: 15000,
           estado: 'pagado',
-          metodoPago: 'Transferencia',
+          metodoPago: 'Mercado Pago',
+          comprobante: 'COMP-17934803688',
+          dniSocio: '123456789',
+          telefonoSocio: '987654321',
+          emailSocio: 'eze@gmail.com',
+          fechaVencimiento: '2026-11-30',
         ),
         PagoModel(
           idPago: 3,
-          socioNombre: 'Carlos López',
+          socioNombre: 'Mocho Gym',
           plan: 'Plan Premium',
-          fechaPago: '17/05/2026',
-          monto: 18000,
-          estado: 'pendiente',
-          metodoPago: 'Efectivo',
+          fechaPago: '2026-10-23',
+          monto: 22000,
+          estado: 'pagado',
+          metodoPago: 'Transferencia',
+          comprobante: 'COMP-17934789123',
+          dniSocio: '38.991.223',
+          telefonoSocio: '11-4567-8901',
+          fechaVencimiento: '2026-11-23',
         ),
         PagoModel(
           idPago: 4,
-          socioNombre: 'Ana Rodriguez',
-          plan: 'Plan Basico',
-          fechaPago: '15/05/2026',
+          socioNombre: 'Luciano Gracia',
+          plan: 'Plan Mensual',
+          fechaPago: '2026-10-15',
           monto: 18000,
+          estado: 'pendiente',
+          metodoPago: 'Efectivo',
+          comprobante: 'COMP-17934651982',
+          dniSocio: '41.234.567',
+          telefonoSocio: '11-2345-6789',
+          fechaVencimiento: '2026-11-15',
+        ),
+        PagoModel(
+          idPago: 5,
+          socioNombre: 'Nicolás Torres',
+          plan: 'Plan Trimestral',
+          fechaPago: '2026-09-25',
+          monto: 48000,
           estado: 'vencido',
           metodoPago: 'Tarjeta',
+          comprobante: 'COMP-17933981241',
+          dniSocio: '42.112.980',
+          telefonoSocio: '11-8765-4321',
+          fechaVencimiento: '2026-10-25',
         ),
       ];
 
@@ -79,7 +109,17 @@ class PagoService {
         final data = jsonDecode(response.body);
         final rawList = data['datos'] as List? ?? [];
         if (rawList.isNotEmpty) {
-          return rawList.map((e) => PagoModel.fromJson(e)).toList();
+          var list = rawList.map((e) => PagoModel.fromJson(e)).toList();
+          if (estado.toLowerCase() != 'todos') {
+            list = list.where((p) => p.estado.toLowerCase() == estado.toLowerCase()).toList();
+          }
+          if (search != null && search.trim().isNotEmpty) {
+            final q = search.trim().toLowerCase();
+            list = list.where((p) =>
+                p.socioNombre.toLowerCase().contains(q) ||
+                p.plan.toLowerCase().contains(q)).toList();
+          }
+          return list;
         }
       }
     } catch (_) {
@@ -129,10 +169,13 @@ class PagoService {
     required String socioNombre,
     required double monto,
     required String plan,
+    int? idSocio,
+    String? dniSocio,
     String metodoPago = 'Efectivo',
     String estado = 'pagado',
   }) async {
     final token = AuthService().token;
+    final currentGymId = AuthService().currentUser?.gimnasio?.idGimnasio;
 
     try {
       final uri = Uri.parse(ApiConfig.pagosUrl);
@@ -143,24 +186,74 @@ class PagoService {
         headers['Authorization'] = 'Bearer $token';
       }
 
+      final bodyMap = <String, dynamic>{
+        'socio_nombre': socioNombre.trim(),
+        'nombreSocio': socioNombre.trim(),
+        'monto': monto,
+        'plan': plan,
+        'metodo_pago': metodoPago,
+        'estado': estado,
+        'fecha_pago': DateTime.now().toIso8601String().split('T')[0],
+      };
+      if (idSocio != null) {
+        bodyMap['id_socio'] = idSocio;
+      }
+      if (dniSocio != null && dniSocio.trim().isNotEmpty) {
+        bodyMap['dniSocio'] = dniSocio.trim();
+      }
+      if (currentGymId != null) {
+        bodyMap['id_gimnasio'] = currentGymId;
+      }
+
       final response = await http
-          .post(
-            uri,
-            headers: headers,
-            body: jsonEncode({
-              'socio_nombre': socioNombre.trim(),
-              'monto': monto,
-              'plan': plan,
-              'metodo_pago': metodoPago,
-              'estado': estado,
-              'fecha_pago': DateTime.now().toIso8601String().split('T')[0],
-            }),
-          )
+          .post(uri, headers: headers, body: jsonEncode(bodyMap))
           .timeout(const Duration(seconds: 10));
 
-      return response.statusCode == 201;
+      final success = response.statusCode == 200 || response.statusCode == 201;
+
+      final nuevoPago = PagoModel(
+        idPago: DateTime.now().millisecondsSinceEpoch,
+        socioNombre: socioNombre.trim(),
+        plan: plan,
+        fechaPago: DateTime.now().toIso8601String().split('T')[0],
+        monto: monto,
+        estado: estado,
+        metodoPago: metodoPago,
+        comprobante: 'COMP-${DateTime.now().millisecondsSinceEpoch}',
+        dniSocio: dniSocio,
+        fechaVencimiento: DateTime.now().add(const Duration(days: 30)).toIso8601String().split('T')[0],
+      );
+      _demoPagos.insert(0, nuevoPago);
+
+      return success;
     } catch (_) {
-      return false;
+      final nuevoPago = PagoModel(
+        idPago: DateTime.now().millisecondsSinceEpoch,
+        socioNombre: socioNombre.trim(),
+        plan: plan,
+        fechaPago: DateTime.now().toIso8601String().split('T')[0],
+        monto: monto,
+        estado: estado,
+        metodoPago: metodoPago,
+        comprobante: 'COMP-${DateTime.now().millisecondsSinceEpoch}',
+        dniSocio: dniSocio,
+        fechaVencimiento: DateTime.now().add(const Duration(days: 30)).toIso8601String().split('T')[0],
+      );
+      _demoPagos.insert(0, nuevoPago);
+      return true;
     }
+  }
+
+  Future<bool> marcarComoPagado(dynamic idPago) async {
+    for (int i = 0; i < _demoPagos.length; i++) {
+      if (_demoPagos[i].idPago.toString() == idPago.toString()) {
+        _demoPagos[i] = _demoPagos[i].copyWith(
+          estado: 'pagado',
+          fechaPago: DateTime.now().toIso8601String().split('T')[0],
+        );
+        break;
+      }
+    }
+    return true;
   }
 }

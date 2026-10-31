@@ -3,7 +3,6 @@ import '../models/dashboard_admin_model.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/dashboard_admin_service.dart';
-import 'dueno/videos/videos_dueno_screen.dart';
 import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -392,15 +391,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       label: 'Marcar\nasistencia',
                       onTap: () {
                         if (widget.onNavigateToTab != null) widget.onNavigateToTab!(3);
-                      },
-                    ),
-                    _buildQuickAction(
-                      icon: Icons.play_circle_outline_rounded,
-                      label: 'Videos',
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (context) => const VideosDuenoScreen()),
-                        );
                       },
                     ),
                     _buildQuickAction(

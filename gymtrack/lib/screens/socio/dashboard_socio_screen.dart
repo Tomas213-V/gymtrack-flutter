@@ -6,7 +6,6 @@ import '../../theme/app_theme.dart';
 import '../../widgets/socio/qr_checkin_dialog.dart';
 import '../../widgets/socio/socio_badge.dart';
 import 'perfil_socio_screen.dart';
-import 'videos/videos_socio_screen.dart';
 
 class DashboardSocioScreen extends StatefulWidget {
   final Function(int index)? onNavigateToTab;
@@ -441,20 +440,6 @@ class _DashboardSocioScreenState extends State<DashboardSocioScreen> {
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => const PerfilSocioScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildQuickActionCard(
-                      icon: Icons.play_circle_outline_rounded,
-                      label: 'Videos',
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const VideosSocioScreen(),
                           ),
                         );
                       },

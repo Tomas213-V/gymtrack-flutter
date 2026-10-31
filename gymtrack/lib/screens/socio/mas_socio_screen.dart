@@ -5,7 +5,6 @@ import 'ejercicios/socio_ejercicios_screen.dart';
 import 'login_socio_screen.dart';
 import 'perfil_socio_screen.dart';
 import 'planes_disponibles_screen.dart';
-import 'videos/videos_socio_screen.dart';
 
 class MasSocioScreen extends StatelessWidget {
   final Function(int index)? onNavigateToTab;
@@ -165,18 +164,6 @@ class MasSocioScreen extends StatelessWidget {
                 if (onNavigateToTab != null) {
                   onNavigateToTab!(2);
                 }
-              },
-            ),
-            const SizedBox(height: 10),
-
-            // 6. Videos de técnica
-            _buildMenuItem(
-              icon: Icons.play_circle_outline_rounded,
-              title: 'Videos de técnica',
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const VideosSocioScreen()),
-                );
               },
             ),
             const SizedBox(height: 10),
