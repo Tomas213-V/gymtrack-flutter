@@ -9,7 +9,8 @@ const {
   updateSocio, 
   changeEstadoSocio,
   deleteSocio,
-  verificarDniSocio
+  verificarDniSocio,
+  getSocioEstadisticas
 } = require('../controllers/socioController');
 const { verifyToken } = require('../middlewares/authMiddleware');
 
@@ -17,6 +18,7 @@ const { verifyToken } = require('../middlewares/authMiddleware');
 router.use(verifyToken);
 
 // Rutas especiales y de Perfil (declaradas antes de /:id para evitar capturas accidentales)
+router.get('/estadisticas', getSocioEstadisticas);
 router.get('/verificar-dni', verificarDniSocio);
 router.get('/perfil', getPerfilSocio);
 router.put('/perfil', updatePerfilSocio);

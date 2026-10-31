@@ -17,6 +17,21 @@ abstract class ISocioRepository {
 
   /// Obtiene el perfil detallado de un socio
   Future<PerfilSocioModel?> getPerfilSocio({int? idSocio});
+
+  /// Crea un nuevo socio en el gimnasio
+  Future<CreateSocioResult> createSocio({
+    required String nombre,
+    required String apellido,
+    required String dni,
+    String? telefono,
+    String? plan,
+    double? precio,
+    String? estado,
+    String? fechaVencimiento,
+  });
+
+  /// Verifica preventivamente si el DNI existe o pertenece a otro gimnasio
+  Future<Map<String, dynamic>?> verificarDni(String dni);
 }
 
 /// Implementación concreta del repositorio de socios.
@@ -52,5 +67,33 @@ class SocioRepository implements ISocioRepository {
   @override
   Future<PerfilSocioModel?> getPerfilSocio({int? idSocio}) async {
     return _service.getPerfilSocio(idSocio: idSocio);
+  }
+
+  @override
+  Future<CreateSocioResult> createSocio({
+    required String nombre,
+    required String apellido,
+    required String dni,
+    String? telefono,
+    String? plan,
+    double? precio,
+    String? estado,
+    String? fechaVencimiento,
+  }) async {
+    return _service.createSocio(
+      nombre: nombre,
+      apellido: apellido,
+      dni: dni,
+      telefono: telefono,
+      plan: plan,
+      precio: precio,
+      estado: estado,
+      fechaVencimiento: fechaVencimiento,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>?> verificarDni(String dni) async {
+    return _service.verificarDni(dni);
   }
 }

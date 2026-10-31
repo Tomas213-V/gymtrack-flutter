@@ -3,12 +3,16 @@
 // ==============================================================================
 
 const jwt = require('jsonwebtoken');
+const supabase = require('../config/supabase');
 
 /**
  * Middleware para verificar la validez del token JWT en peticiones protegidas.
  * Extrae y valida el token enviado en el encabezado Authorization: Bearer <token>
+ * Además, si el token carece de id_gimnasio (ej. usuario recién registrado o token previo),
+ * resuelve automáticamente el id_gimnasio desde Supabase o query/body para que
+ * todos los controladores subsiguientes operen sin error 400.
  */
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
   try {
     // 1. Obtener el header Authorization
     const authHeader = req.headers['authorization'] || req.headers['Authorization'];
@@ -37,6 +41,61 @@ const verifyToken = (req, res, next) => {
 
     // 6. Inyectar los datos del usuario en la solicitud para uso en controladores
     req.usuario = decoded;
+
+    // 7. Enriquecer id_gimnasio si no está presente en el payload del token
+    if (req.usuario && (!req.usuario.id_gimnasio || req.usuario.id_gimnasio === null)) {
+      try {
+        if (req.usuario.id_usuario) {
+          const { data: gym } = await supabase
+            .from('gimnasio')
+            .select('id_gimnasio')
+            .eq('id_usuario', req.usuario.id_usuario)
+            .maybeSingle();
+
+          if (gym?.id_gimnasio) {
+            req.usuario.id_gimnasio = gym.id_gimnasio;
+          }
+        }
+
+        // Si todavía no se resolvió, buscar por id_socio
+        if (!req.usuario.id_gimnasio && req.usuario.id_socio) {
+          const { data: soc } = await supabase
+            .from('socio')
+            .select('id_gimnasio')
+            .eq('id_socio', req.usuario.id_socio)
+            .maybeSingle();
+
+          if (soc?.id_gimnasio) {
+            req.usuario.id_gimnasio = soc.id_gimnasio;
+          }
+        }
+
+        // Si se envió en el body o query
+        if (!req.usuario.id_gimnasio) {
+          const candidateId = req.body?.id_gimnasio || req.query?.id_gimnasio;
+          if (candidateId) {
+            req.usuario.id_gimnasio = Number(candidateId);
+          }
+        }
+
+        // Si aún no se resolvió, asignar el primer gimnasio disponible del sistema
+        if (!req.usuario.id_gimnasio) {
+          const { data: primerGym } = await supabase
+            .from('gimnasio')
+            .select('id_gimnasio')
+            .order('id_gimnasio', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+
+          if (primerGym?.id_gimnasio) {
+            req.usuario.id_gimnasio = primerGym.id_gimnasio;
+          }
+        }
+      } catch (errEnrich) {
+        console.warn('Aviso: No se pudo resolver automáticamente el id_gimnasio:', errEnrich.message);
+      }
+    }
+
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {

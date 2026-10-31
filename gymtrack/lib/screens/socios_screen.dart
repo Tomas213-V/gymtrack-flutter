@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../models/plan_membresia_model.dart';
 import '../models/socio_model.dart';
+import '../services/plan_membresia_service.dart';
 import '../services/socio_service.dart';
 
 class SociosScreen extends StatefulWidget {
@@ -12,9 +14,11 @@ class SociosScreen extends StatefulWidget {
 
 class _SociosScreenState extends State<SociosScreen> {
   final SocioService _socioService = SocioService();
+  final PlanMembresiaService _planService = PlanMembresiaService();
   final TextEditingController _searchController = TextEditingController();
 
   List<SocioModel> _socios = [];
+  List<PlanMembresiaModel> _planesActivos = [];
   SocioStatsModel _stats = SocioStatsModel.defaultStats();
   bool _isLoading = true;
   String _selectedTab = 'todos'; // 'todos', 'activo', 'pendiente', 'inactivo'
@@ -46,6 +50,7 @@ class _SociosScreenState extends State<SociosScreen> {
       estado: _selectedTab,
       search: _searchController.text.trim(),
     );
+    final planes = await _planService.getPlanes(estado: 'activo');
 
     if (!mounted) return;
 
@@ -54,6 +59,7 @@ class _SociosScreenState extends State<SociosScreen> {
       _socios = result['socios'] as List<SocioModel>;
       _totalSocios = result['total'] as int? ?? _stats.total;
       _totalPages = result['totalPages'] as int? ?? 1;
+      _planesActivos = planes;
       _isLoading = false;
     });
   }
@@ -71,18 +77,28 @@ class _SociosScreenState extends State<SociosScreen> {
     _loadData();
   }
 
-  void _showNewSocioModal() {
+  void _showNewSocioModal() async {
+    if (_planesActivos.isEmpty) {
+      final planes = await _planService.getPlanes(estado: 'activo');
+      if (mounted) {
+        setState(() => _planesActivos = planes);
+      }
+    }
+
+    final initialPlan = _planesActivos.isNotEmpty ? _planesActivos.first : null;
     final nombreCtrl = TextEditingController();
     final apellidoCtrl = TextEditingController();
     final dniCtrl = TextEditingController();
     final telCtrl = TextEditingController();
-    String selectedPlan = 'Plan Mensual';
+    String selectedPlan = initialPlan != null ? initialPlan.nombre : 'Plan Mensual';
     String selectedEstado = 'activo';
     final formKey = GlobalKey<FormState>();
     bool isSaving = false;
     bool isVerifyingDni = false;
     Map<String, dynamic>? dniCheckResult;
     Timer? dniDebounce;
+
+    if (!mounted) return;
 
     showModalBottomSheet(
       context: context,
@@ -265,9 +281,26 @@ class _SociosScreenState extends State<SociosScreen> {
                         initialValue: selectedPlan,
                         dropdownColor: const Color(0xFF1E282D),
                         style: const TextStyle(color: Colors.white),
-                        decoration: _inputDecoration('Plan', Icons.card_membership_outlined),
-                        items: ['Plan Mensual', 'Plan Trimestral', 'Plan Anual']
-                            .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                        decoration: _inputDecoration('Plan de Membresía', Icons.card_membership_outlined),
+                        items: _planesActivos
+                            .map((p) => DropdownMenuItem(
+                                  value: p.nombre,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(p.nombre),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '${p.duracionTexto} • \$${p.precio.toStringAsFixed(0)}',
+                                        style: const TextStyle(
+                                          color: Color(0xFF00E676),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ))
                             .toList(),
                         onChanged: (val) {
                           if (val != null) setModalState(() => selectedPlan = val);
@@ -298,14 +331,34 @@ class _SociosScreenState extends State<SociosScreen> {
                                   if (!formKey.currentState!.validate()) return;
                                   setModalState(() => isSaving = true);
 
+                                  final matchedPlan = _planesActivos.firstWhere(
+                                    (p) => p.nombre == selectedPlan,
+                                    orElse: () => _planesActivos.isNotEmpty
+                                        ? _planesActivos.first
+                                        : PlanMembresiaModel(
+                                            idPlanMembresia: 0,
+                                            idGimnasio: 0,
+                                            nombre: selectedPlan,
+                                            precio: 18000,
+                                            duracionDias: 30,
+                                            estado: 'activo',
+                                          ),
+                                  );
+
+                                  final now = DateTime.now();
+                                  final venc = now.add(Duration(days: matchedPlan.duracionDias));
+                                  final fechaVencIso =
+                                      '${venc.year}-${venc.month.toString().padLeft(2, '0')}-${venc.day.toString().padLeft(2, '0')}';
+
                                   final res = await _socioService.createSocio(
                                     nombre: nombreCtrl.text.trim(),
                                     apellido: apellidoCtrl.text.trim(),
                                     dni: dniCtrl.text.trim(),
                                     telefono: telCtrl.text.trim(),
                                     plan: selectedPlan,
+                                    precio: matchedPlan.precio,
                                     estado: selectedEstado,
-                                    fechaVencimiento: '25 May 2026',
+                                    fechaVencimiento: fechaVencIso,
                                   );
 
                                   dniDebounce?.cancel();

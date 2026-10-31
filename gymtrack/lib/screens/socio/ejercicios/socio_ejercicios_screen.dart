@@ -143,7 +143,7 @@ class _SocioEjerciciosScreenState extends State<SocioEjerciciosScreen> {
                   ),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String>(
-                    value: selectedGrupo,
+                    initialValue: selectedGrupo,
                     dropdownColor: const Color(0xFF222222),
                     style: const TextStyle(color: Colors.white, fontSize: 14),
                     decoration: InputDecoration(
@@ -168,7 +168,7 @@ class _SocioEjerciciosScreenState extends State<SocioEjerciciosScreen> {
                   ),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String>(
-                    value: selectedDificultad,
+                    initialValue: selectedDificultad,
                     dropdownColor: const Color(0xFF222222),
                     style: const TextStyle(color: Colors.white, fontSize: 14),
                     decoration: InputDecoration(

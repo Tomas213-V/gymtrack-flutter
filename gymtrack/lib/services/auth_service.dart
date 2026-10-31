@@ -158,11 +158,18 @@ class AuthService {
     String? telefono,
   }) async {
     try {
+      final cleanEmail = email.trim();
+      final userPart = cleanEmail.contains('@') ? cleanEmail.split('@')[0] : 'Usuario';
+      final cleanNombre = nombre.trim().isNotEmpty
+          ? nombre.trim()
+          : (userPart.isNotEmpty ? '${userPart[0].toUpperCase()}${userPart.substring(1)}' : 'Usuario');
+      final cleanApellido = apellido.trim().isNotEmpty ? apellido.trim() : 'Dueño';
+
       final url = Uri.parse(ApiConfig.registerUrl);
       final bodyData = <String, dynamic>{
-        'nombre': nombre.trim(),
-        'apellido': apellido.trim(),
-        'email': email.trim(),
+        'nombre': cleanNombre,
+        'apellido': cleanApellido,
+        'email': cleanEmail,
         'contrasena': password,
       };
 

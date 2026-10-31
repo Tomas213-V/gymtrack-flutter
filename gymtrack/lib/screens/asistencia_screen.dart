@@ -205,13 +205,13 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // 1. Encabezado con Icono, Título y Selector de Fecha
+                // 1. Encabezado con Icono, Título y Fila de Acciones
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
-                      width: 42,
-                      height: 42,
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
                         color: const Color(0xFF00E676).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
@@ -219,7 +219,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                       child: const Icon(
                         Icons.calendar_month_rounded,
                         color: Color(0xFF00E676),
-                        size: 22,
+                        size: 24,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -233,6 +233,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                               color: Colors.white,
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
+                              letterSpacing: -0.3,
                             ),
                           ),
                           SizedBox(height: 2),
@@ -246,44 +247,53 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                         ],
                       ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // Fila de Filtro de Fecha y Botón QR
+                Row(
+                  children: [
                     // Botón Selector de Fecha
-                    InkWell(
-                      onTap: _selectDate,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF161E22),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFF27343B), width: 1),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.calendar_today_rounded, size: 14, color: Color(0xFF8F9CA3)),
-                            const SizedBox(width: 6),
-                            Text(
-                              _formatDate(_selectedDate),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                    Expanded(
+                      child: InkWell(
+                        onTap: _selectDate,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF161E22),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFF27343B), width: 1),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.calendar_today_rounded, size: 14, color: Color(0xFF00E676)),
+                              const SizedBox(width: 8),
+                              Text(
+                                _formatDate(_selectedDate),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: Color(0xFF8F9CA3)),
-                          ],
+                              const SizedBox(width: 6),
+                              const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: Color(0xFF8F9CA3)),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
 
                     // Botón Mostrar QR para el ingreso de socios
                     InkWell(
                       onTap: () => QrGimnasioDialog.show(context),
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         decoration: BoxDecoration(
                           color: const Color(0xFF00E676).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
@@ -293,12 +303,12 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.qr_code_2_rounded, size: 16, color: Color(0xFF00E676)),
-                            SizedBox(width: 5),
+                            SizedBox(width: 6),
                             Text(
                               'QR Check-in',
                               style: TextStyle(
                                 color: Color(0xFF00E676),
-                                fontSize: 12,
+                                fontSize: 12.5,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -308,7 +318,6 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                     ),
                   ],
                 ),
-
 
                 const SizedBox(height: 18),
 
@@ -419,7 +428,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
 
                 // 3. Tarjetas de Métricas
                 SizedBox(
-                  height: 104,
+                  height: 112,
                   child: ListView(
                     scrollDirection: Axis.horizontal,
                     physics: const BouncingScrollPhysics(),
@@ -529,8 +538,8 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
     required Color subtextColor,
   }) {
     return Container(
-      width: 110,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      width: 136,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
       decoration: BoxDecoration(
         color: const Color(0xFF161E22),
         borderRadius: BorderRadius.circular(14),
@@ -550,8 +559,8 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Color(0xFF8F9CA3),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -564,15 +573,17 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
             value,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 20,
+              fontSize: 21,
               fontWeight: FontWeight.bold,
             ),
           ),
           Text(
             subtext,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: subtextColor,
-              fontSize: 10,
+              fontSize: 10.5,
               fontWeight: FontWeight.w600,
             ),
           ),

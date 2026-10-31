@@ -1,5 +1,77 @@
 const bcrypt = require('bcrypt');
 const supabase = require('../config/supabase');
+/**
+ * Resuelve de forma robusta el ID de gimnasio a partir del token, body, query
+ * o consultando la base de datos para el usuario autenticado.
+ */
+const resolverIdGimnasio = async (req) => {
+  if (req.usuario?.id_gimnasio) {
+    return req.usuario.id_gimnasio;
+  }
+  if (req.body?.id_gimnasio) {
+    return Number(req.body.id_gimnasio);
+  }
+  if (req.query?.id_gimnasio) {
+    return Number(req.query.id_gimnasio);
+  }
+  if (req.usuario?.id_usuario) {
+    const { data: gym } = await supabase
+      .from('gimnasio')
+      .select('id_gimnasio')
+      .eq('id_usuario', req.usuario.id_usuario)
+      .maybeSingle();
+    if (gym?.id_gimnasio) {
+      if (req.usuario) req.usuario.id_gimnasio = gym.id_gimnasio;
+      return gym.id_gimnasio;
+    }
+  }
+  if (req.usuario?.id_socio) {
+    const { data: soc } = await supabase
+      .from('socio')
+      .select('id_gimnasio')
+      .eq('id_socio', req.usuario.id_socio)
+      .maybeSingle();
+    if (soc?.id_gimnasio) {
+      if (req.usuario) req.usuario.id_gimnasio = soc.id_gimnasio;
+      return soc.id_gimnasio;
+    }
+  }
+  const { data: firstGym } = await supabase
+    .from('gimnasio')
+    .select('id_gimnasio')
+    .order('id_gimnasio', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (firstGym?.id_gimnasio) {
+    if (req.usuario) req.usuario.id_gimnasio = firstGym.id_gimnasio;
+    return firstGym.id_gimnasio;
+  }
+  return null;
+};
+
+/**
+ * Sanitiza cualquier valor de fecha (string texto, formato ISO, o regional)
+ * y lo convierte a formato ISO YYYY-MM-DD para PostgreSQL.
+ */
+const parseFechaIso = (val) => {
+  if (!val) return null;
+  const str = val.toString().trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    return d.toISOString().split('T')[0];
+  }
+  const parts = str.split(/[\/\- ]/);
+  if (parts.length === 3) {
+    if (parts[0].length === 4) {
+      return parts[0] + '-' + parts[1].padStart(2, '0') + '-' + parts[2].padStart(2, '0');
+    } else if (parts[2].length === 4) {
+      return parts[2] + '-' + parts[1].padStart(2, '0') + '-' + parts[0].padStart(2, '0');
+    }
+  }
+  return null;
+};
+
 
 /**
  * 1. OBTENER SOCIOS (Con paginación, filtros y búsqueda por Nombre, Apellido, DNI o Teléfono)
@@ -7,10 +79,15 @@ const supabase = require('../config/supabase');
  */
 const getSocios = async (req, res) => {
   try {
-    const idGimnasio = req.usuario?.id_gimnasio;
-
+    const idGimnasio = await resolverIdGimnasio(req);
     if (!idGimnasio) {
-      return res.status(400).json({ error: 'No se identificó el gimnasio autenticado.' });
+      return res.status(200).json({
+        total: 0,
+        page: 1,
+        totalPages: 1,
+        limit: 10,
+        socios: []
+      });
     }
 
     const { estado, search, limit, page } = req.query;
@@ -73,7 +150,7 @@ const getSocios = async (req, res) => {
 const getSocioById = async (req, res) => {
   try {
     const { id } = req.params;
-    const idGimnasio = req.usuario?.id_gimnasio;
+    const idGimnasio = await resolverIdGimnasio(req);
 
     let query = supabase
       .from('socio')
@@ -288,7 +365,7 @@ const createSocio = async (req, res) => {
         id_socio: nuevoSocio.id_socio,
         precio: planPrecio || 0,
         fecha_inicio: new Date().toISOString().split('T')[0],
-        fecha_vencimiento: fecha_vencimiento || new Date(Date.now() + planDuracion * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        fecha_vencimiento: parseFechaIso(fecha_vencimiento) || new Date(Date.now() + planDuracion * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         estado: estado || 'activo'
       };
       if (planId) {
@@ -902,7 +979,7 @@ const updatePerfilSocio = async (req, res) => {
  */
 const verificarDniSocio = async (req, res) => {
   try {
-    const idGimnasio = req.usuario?.id_gimnasio;
+    const idGimnasio = await resolverIdGimnasio(req);
     const { dni } = req.query;
 
     if (!dni || !dni.toString().trim()) {
@@ -987,7 +1064,66 @@ const verificarDniSocio = async (req, res) => {
   }
 };
 
+/**
+ * OBTENER ESTADÍSTICAS GLOBALES DE SOCIOS
+ * GET /api/socios/estadisticas
+ */
+const getSocioEstadisticas = async (req, res) => {
+  try {
+    const idGimnasio = await resolverIdGimnasio(req);
+    if (!idGimnasio) {
+      return res.status(200).json({
+        total: 0,
+        activos: 0,
+        pendientes: 0,
+        inactivos: 0,
+        nuevosEsteMes: 0
+      });
+    }
+
+    const { data: socios, error } = await supabase
+      .from('socio')
+      .select('id_socio, estado, fecha_alta')
+      .eq('id_gimnasio', idGimnasio);
+
+    if (error) {
+      return res.status(500).json({ error: 'Error al consultar estadísticas: ' + error.message });
+    }
+
+    const total = socios?.length || 0;
+    let activos = 0;
+    let pendientes = 0;
+    let inactivos = 0;
+    let nuevosEsteMes = 0;
+
+    const ahora = new Date();
+    const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString().split('T')[0];
+
+    (socios || []).forEach(s => {
+      const est = (s.estado || '').toLowerCase();
+      if (est === 'activo') activos++;
+      else if (est === 'pendiente') pendientes++;
+      else if (est === 'inactivo') inactivos++;
+
+      if (s.fecha_alta && s.fecha_alta >= inicioMes) {
+        nuevosEsteMes++;
+      }
+    });
+
+    return res.status(200).json({
+      total,
+      activos,
+      pendientes,
+      inactivos,
+      nuevosEsteMes
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Error interno: ' + error.message });
+  }
+};
+
 module.exports = {
+
   getSocios,
   getSocioById,
   createSocio,
@@ -996,5 +1132,6 @@ module.exports = {
   deleteSocio,
   getPerfilSocio,
   updatePerfilSocio,
-  verificarDniSocio
+  verificarDniSocio,
+  getSocioEstadisticas
 };

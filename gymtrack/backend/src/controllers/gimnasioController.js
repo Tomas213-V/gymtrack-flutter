@@ -1,8 +1,10 @@
+const jwt = require('jsonwebtoken');
 const supabase = require('../config/supabase');
 
 /**
  * CONTROLADOR: CREAR GIMNASIO PARA UN USUARIO AUTENTICADO
- * Asocia el nuevo gimnasio con el id_usuario
+ * Asocia el nuevo gimnasio con el id_usuario y emite un token JWT refrescado
+ * con id_gimnasio para que el usuario pueda crear socios y consultar métricas inmediatamente.
  */
 const crearGimnasio = async (req, res) => {
   try {
@@ -18,16 +20,31 @@ const crearGimnasio = async (req, res) => {
       return res.status(400).json({ error: 'El nombre del gimnasio es obligatorio.' });
     }
 
+    const jwtSecret = process.env.JWT_SECRET || 'gymtrack_jwt_secret_key_2026';
+    const expiresIn = process.env.JWT_EXPIRES_IN || '24h';
+
     // Comprobar si el usuario ya tiene un gimnasio registrado
     const { data: gymExistente } = await supabase
       .from('gimnasio')
-      .select('id_gimnasio, nombre')
+      .select('id_gimnasio, nombre, direccion, telefono, email')
       .eq('id_usuario', id_usuario)
       .maybeSingle();
 
     if (gymExistente) {
-      return res.status(400).json({
-        error: 'El usuario ya tiene un gimnasio registrado.',
+      const refreshedToken = jwt.sign(
+        {
+          id_usuario: id_usuario,
+          id_gimnasio: gymExistente.id_gimnasio,
+          email: req.usuario?.email || null,
+          rol: req.usuario?.rol || 'dueño'
+        },
+        jwtSecret,
+        { expiresIn }
+      );
+
+      return res.status(200).json({
+        mensaje: 'El usuario ya tiene un gimnasio registrado.',
+        token: refreshedToken,
         gimnasio: gymExistente
       });
     }
@@ -53,8 +70,21 @@ const crearGimnasio = async (req, res) => {
       return res.status(500).json({ error: 'Error al registrar el gimnasio: ' + errGym.message });
     }
 
+    // Emitir nuevo token con id_gimnasio incluido
+    const token = jwt.sign(
+      {
+        id_usuario: id_usuario,
+        id_gimnasio: nuevoGimnasio.id_gimnasio,
+        email: req.usuario?.email || null,
+        rol: req.usuario?.rol || 'dueño'
+      },
+      jwtSecret,
+      { expiresIn }
+    );
+
     return res.status(201).json({
       mensaje: 'Gimnasio registrado exitosamente.',
+      token,
       gimnasio: nuevoGimnasio
     });
   } catch (error) {

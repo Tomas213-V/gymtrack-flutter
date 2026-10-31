@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/pago_model.dart';
+import '../models/plan_membresia_model.dart';
 import '../services/pago_service.dart';
+import '../services/plan_membresia_service.dart';
 
 class PagosScreen extends StatefulWidget {
   const PagosScreen({super.key});
@@ -11,9 +13,11 @@ class PagosScreen extends StatefulWidget {
 
 class _PagosScreenState extends State<PagosScreen> {
   final PagoService _pagoService = PagoService();
+  final PlanMembresiaService _planService = PlanMembresiaService();
   final TextEditingController _searchController = TextEditingController();
 
   List<PagoModel> _pagos = [];
+  List<PlanMembresiaModel> _planesActivos = [];
   ResumenPagosModel _resumen = ResumenPagosModel.defaultResumen();
   bool _isLoading = true;
 
@@ -38,24 +42,38 @@ class _PagosScreenState extends State<PagosScreen> {
     final pagos = await _pagoService.getPagos(
       search: _searchController.text.trim(),
     );
+    final planes = await _planService.getPlanes(estado: 'activo');
 
     if (!mounted) return;
 
     setState(() {
       _resumen = resumen;
       _pagos = pagos;
+      _planesActivos = planes;
       _isLoading = false;
     });
   }
 
-  void _showRegistrarPagoModal() {
+  void _showRegistrarPagoModal() async {
+    if (_planesActivos.isEmpty) {
+      final planes = await _planService.getPlanes(estado: 'activo');
+      if (mounted) {
+        setState(() => _planesActivos = planes);
+      }
+    }
+
+    final initialPlan = _planesActivos.isNotEmpty ? _planesActivos.first : null;
     final socioNombreCtrl = TextEditingController();
-    final montoCtrl = TextEditingController(text: '18000');
-    String selectedPlan = 'Plan Premium';
+    final montoCtrl = TextEditingController(
+      text: initialPlan != null ? initialPlan.precio.toStringAsFixed(0) : '18000',
+    );
+    String selectedPlan = initialPlan != null ? initialPlan.nombre : 'Plan Mensual';
     String selectedMetodo = 'Efectivo';
     String selectedEstado = 'pagado';
     final formKey = GlobalKey<FormState>();
     bool isSaving = false;
+
+    if (!mounted) return;
 
     showModalBottomSheet(
       context: context,
@@ -118,12 +136,38 @@ class _PagosScreenState extends State<PagosScreen> {
                         initialValue: selectedPlan,
                         dropdownColor: const Color(0xFF1E282D),
                         style: const TextStyle(color: Colors.white),
-                        decoration: _inputDecoration('Plan', Icons.card_membership_outlined),
-                        items: ['Plan Básico', 'Plan Mensual', 'Plan Premium', 'Plan Anual']
-                            .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                        decoration: _inputDecoration('Plan Activo', Icons.card_membership_outlined),
+                        items: _planesActivos
+                            .map((p) => DropdownMenuItem(
+                                  value: p.nombre,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(p.nombre),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '\$${p.precio.toStringAsFixed(0)}',
+                                        style: const TextStyle(
+                                          color: Color(0xFF00E676),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ))
                             .toList(),
                         onChanged: (val) {
-                          if (val != null) setModalState(() => selectedPlan = val);
+                          if (val != null) {
+                            setModalState(() {
+                              selectedPlan = val;
+                              final matched = _planesActivos.firstWhere(
+                                (p) => p.nombre == val,
+                                orElse: () => _planesActivos.first,
+                              );
+                              montoCtrl.text = matched.precio.toStringAsFixed(0);
+                            });
+                          }
                         },
                       ),
                       const SizedBox(height: 12),

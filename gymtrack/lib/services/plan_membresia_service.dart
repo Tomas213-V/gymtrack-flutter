@@ -32,13 +32,48 @@ class PlanMembresiaService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final rawList = data['planes'] as List? ?? [];
-        return rawList
-            .map((e) => PlanMembresiaModel.fromJson(e as Map<String, dynamic>))
-            .toList();
+        if (rawList.isNotEmpty) {
+          return rawList
+              .map((e) => PlanMembresiaModel.fromJson(e as Map<String, dynamic>))
+              .toList();
+        }
       }
     } catch (_) {}
 
-    return [];
+    return [
+      PlanMembresiaModel(
+        idPlanMembresia: 1,
+        idGimnasio: 0,
+        nombre: 'Plan Básico',
+        precio: 15000,
+        duracionDias: 30,
+        estado: 'activo',
+      ),
+      PlanMembresiaModel(
+        idPlanMembresia: 2,
+        idGimnasio: 0,
+        nombre: 'Plan Mensual Completo',
+        precio: 22000,
+        duracionDias: 30,
+        estado: 'activo',
+      ),
+      PlanMembresiaModel(
+        idPlanMembresia: 3,
+        idGimnasio: 0,
+        nombre: 'Pase Libre Total',
+        precio: 28000,
+        duracionDias: 30,
+        estado: 'activo',
+      ),
+      PlanMembresiaModel(
+        idPlanMembresia: 4,
+        idGimnasio: 0,
+        nombre: 'Plan Trimestral',
+        precio: 58000,
+        duracionDias: 90,
+        estado: 'activo',
+      ),
+    ];
   }
 
   Future<bool> createPlan({

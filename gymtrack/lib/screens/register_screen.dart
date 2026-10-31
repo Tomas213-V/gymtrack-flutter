@@ -39,15 +39,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     final email = _emailController.text.trim();
-    final nameFromEmail = email.contains('@') ? email.split('@')[0] : 'Usuario';
-    final formattedName = nameFromEmail.isNotEmpty
-        ? '${nameFromEmail[0].toUpperCase()}${nameFromEmail.substring(1)}'
-        : 'Usuario';
+    final userPart = email.contains('@') ? email.split('@')[0] : 'Usuario';
+    String defaultNombre = 'Usuario';
+    String defaultApellido = 'Dueño';
+
+    if (userPart.contains('.')) {
+      final parts = userPart.split('.');
+      if (parts[0].isNotEmpty) {
+        defaultNombre = '${parts[0][0].toUpperCase()}${parts[0].substring(1)}';
+      }
+      if (parts.length > 1 && parts[1].isNotEmpty) {
+        defaultApellido = '${parts[1][0].toUpperCase()}${parts[1].substring(1)}';
+      }
+    } else if (userPart.isNotEmpty) {
+      defaultNombre = '${userPart[0].toUpperCase()}${userPart.substring(1)}';
+      defaultApellido = 'Dueño';
+    }
 
     final authService = AuthService();
     final response = await authService.register(
-      nombre: formattedName,
-      apellido: '',
+      nombre: defaultNombre,
+      apellido: defaultApellido,
       email: email,
       password: _passwordController.text,
       nombreGimnasio: null,

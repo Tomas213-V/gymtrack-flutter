@@ -35,7 +35,14 @@ const registerOwner = async (req, res) => {
     } = req.body;
 
     // 1. Criterio de Aceptación: Validar datos obligatorios
-    if (!nombre || !apellido || !email || !contrasena) {
+    const cleanEmailCandidate = email ? email.trim().toLowerCase() : '';
+    const userPart = cleanEmailCandidate.includes('@') ? cleanEmailCandidate.split('@')[0] : 'usuario';
+    const cleanNombre = (nombre && nombre.trim())
+      ? nombre.trim()
+      : (userPart ? (userPart.charAt(0).toUpperCase() + userPart.slice(1)) : 'Usuario');
+    const cleanApellido = (apellido && apellido.trim()) ? apellido.trim() : 'Dueño';
+
+    if (!email || !contrasena) {
       return res.status(400).json({ error: 'Todos los campos obligatorios deben ser completados.' });
     }
 
@@ -65,8 +72,8 @@ const registerOwner = async (req, res) => {
       .from('usuario')
       .insert([
         {
-          nombre: nombre.trim(),
-          apellido: apellido.trim(),
+          nombre: cleanNombre,
+          apellido: cleanApellido,
           email: cleanEmail,
           contrasena: contrasenaHash,
           rol: 'dueño',
