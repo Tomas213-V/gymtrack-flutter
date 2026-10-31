@@ -168,37 +168,7 @@ class MasSocioScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
 
-            // 6. Configuración
-            _buildMenuItem(
-              icon: Icons.settings_outlined,
-              title: 'Configuración',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Configuración próximamente'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 10),
-
-            // 7. Ayuda y soporte
-            _buildMenuItem(
-              icon: Icons.help_outline_rounded,
-              title: 'Ayuda y soporte',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Soporte de gimnasio: soporte@gymtrack.com'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 10),
-
-            // 8. Cerrar sesión
+            // 6. Cerrar sesión
             _buildMenuItem(
               icon: Icons.logout_rounded,
               title: 'Cerrar sesión',

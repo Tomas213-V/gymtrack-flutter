@@ -112,6 +112,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Mi Rutina'), findsOneWidget);
+    expect(find.text('Rutinas del Gimnasio'), findsOneWidget);
+    expect(find.text('Rutinas Propias'), findsOneWidget);
+
+    // Switch to Rutinas Propias to view personal active routine
+    await tester.tap(find.text('Rutinas Propias'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Fuerza - Nivel Intermedio'), findsOneWidget);
     expect(find.text('Asignada por: Prof. Martín'), findsOneWidget);
     expect(find.text('DÍAS DE ENTRENAMIENTO'), findsOneWidget);
@@ -205,8 +212,6 @@ void main() {
     expect(find.text('Mis pagos'), findsOneWidget);
     expect(find.text('Mis rutinas'), findsOneWidget);
     expect(find.text('Mi progreso'), findsOneWidget);
-    expect(find.text('Configuración'), findsOneWidget);
-    expect(find.text('Ayuda y soporte'), findsOneWidget);
     expect(find.text('Cerrar sesión'), findsOneWidget);
 
     // Navigate to profile
@@ -230,6 +235,11 @@ void main() {
 
     // Tap Rutina
     await tester.tap(find.text('Rutina'));
+    await tester.pumpAndSettle();
+    expect(find.text('Rutinas del Gimnasio'), findsOneWidget);
+    expect(find.text('Rutinas Propias'), findsOneWidget);
+
+    await tester.tap(find.text('Rutinas Propias'));
     await tester.pumpAndSettle();
     expect(find.text('Fuerza - Nivel Intermedio'), findsOneWidget);
 
