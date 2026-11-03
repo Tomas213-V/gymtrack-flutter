@@ -4,6 +4,7 @@
 
 // Importamos la función 'createClient' del SDK oficial de Supabase para Node.js
 const { createClient } = require('@supabase/supabase-js');
+const WebSocket = require('ws');
 
 // Importamos 'path' para construir rutas de archivos de manera segura en cualquier sistema operativo
 const path = require('path');
@@ -29,7 +30,11 @@ if (!supabaseUrl || !supabaseKey) {
 // Creamos la instancia del cliente de Supabase con las credenciales cargadas.
 // Esta instancia nos permite realizar operaciones como consultas a tablas (.from),
 // autenticación (.auth), almacenamiento (.storage), etc.
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  realtime: {
+    transport: WebSocket,
+  },
+});
 
 // Exportamos la instancia para que pueda ser reutilizada en controladores, servicios y rutas
 // siguiendo el patrón singleton (una sola conexión compartida en toda la app)
